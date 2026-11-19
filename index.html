@@ -1,0 +1,728 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><title>Instagram Unfollowers</title>
+<meta name="description" content="Go through your Instagram export and see who doesn't follow you back. Your files are read in your browser and never uploaded.">
+<meta name="theme-color" content="#000000">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23000'/%3E%3Ccircle cx='16' cy='13' r='5' fill='none' stroke='%230095f6' stroke-width='2.5'/%3E%3Cpath d='M7 27c1.6-5 4.9-7.5 9-7.5s7.4 2.5 9 7.5' fill='none' stroke='%230095f6' stroke-width='2.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Grand+Hotel&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<style>
+:root{--bg:#000;--sf:#121212;--sf2:#1a1a1a;--bd:#262626;--bd2:#1c1c1c;--tx:#f5f5f5;--mu:#a8a8a8;--bl:#0095f6;--gn:#3ddc84;--rd:#ff4d4f;--pk:#d62976;--yl:#feda75;color-scheme:dark;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}*{box-sizing:border-box}[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--tx);font:14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;-webkit-text-size-adjust:100%}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+.w{max-width:900px;margin:0 auto;padding:0 12px 48px}a{color:var(--tx);font-weight:600;text-decoration:none}a:hover{text-decoration:underline}.mu{color:var(--mu)}
+h4{margin:0;font-size:14px;font-weight:600}
+::selection{background:#0095f655}
+:focus-visible{outline:2px solid var(--bl);outline-offset:2px}
+/* header */
+#hd{position:sticky;top:env(safe-area-inset-top,0px);z-index:6;background:rgba(0,0,0,.82);backdrop-filter:blur(12px);display:flex;gap:8px;align-items:center;padding:10px 0;border-bottom:1px solid var(--bd);flex-wrap:wrap}
+.logo{font:30px "Grand Hotel",cursive;margin-right:auto;background:linear-gradient(45deg,#feda75,#fa7e1e,#d62976,#962fbf,#4f5bd5);-webkit-background-clip:text;background-clip:text;color:transparent;line-height:1.25;white-space:nowrap}
+select,input[type=text],input[type=date]{background:var(--sf);color:var(--tx);border:1px solid var(--bd);border-radius:10px;padding:8px 10px;font:inherit;max-width:100%;transition:border-color .15s,background .15s}
+select:hover,input:hover{border-color:#3a3a3a}
+button{font:inherit;background:#262626;color:var(--tx);border:0;border-radius:10px;padding:8px 14px;font-weight:600;cursor:pointer;transition:background .15s,transform .08s,opacity .15s,color .15s,border-color .15s}
+button:hover{background:#333}button:active{transform:scale(.97)}button:disabled{opacity:.38;cursor:default;transform:none}
+.pr{background:var(--bl)}.pr:hover{background:#1a86e0}
+.gh{background:none;border:1px solid var(--bd)}.gh:hover{background:var(--sf2)}
+.big{display:flex;align-items:center;justify-content:center;gap:9px;width:100%;padding:14px;font-size:16px;border-radius:14px;margin:14px 0 2px}
+.sel2{min-width:0;flex:0 1 auto}
+/* stats */
+#st{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:14px 0 0}
+.cd{background:var(--sf);border:1px solid var(--bd);border-radius:14px;padding:12px 15px;display:flex;flex-direction:column;gap:1px}
+.cd b{font-size:23px;letter-spacing:-.4px}.cd i{font-style:normal;font-weight:600;font-size:12px}
+.up{color:var(--gn)}.dn{color:var(--rd)}.fl{color:#777}
+.hist{display:flex;align-items:center;gap:10px;background:#feda7514;border:1px solid #feda7533;color:var(--yl);border-radius:12px;padding:9px 13px;margin-top:12px;font-size:13px}
+.hist button{margin-left:auto;background:#feda7522;color:var(--yl);padding:5px 11px;font-size:12px}
+/* tabs */
+#tb{display:flex;overflow-x:auto;border-bottom:1px solid var(--bd);margin-top:14px;scrollbar-width:none}#tb::-webkit-scrollbar{display:none}
+#tb button{background:none;border-radius:0;color:var(--mu);padding:12px 15px;white-space:nowrap;position:relative;font-weight:600}
+#tb button:hover{color:var(--tx);background:none}
+#tb button::after{content:"";position:absolute;left:12px;right:12px;bottom:-1px;height:2px;background:var(--tx);border-radius:2px;transform:scaleX(0);transition:transform .22s ease}
+#tb button.on{color:var(--tx)}#tb button.on::after{transform:scaleX(1)}
+#tb .n{color:#6d6d6d;font-weight:500;margin-left:5px}#tb button.on .n{color:var(--mu)}
+#bar{padding:14px 0 0}#q{width:100%}
+/* list card */
+.card{background:var(--sf);border:1px solid var(--bd);border-radius:16px;overflow:hidden;margin-top:12px}
+.sr{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;gap:10px;border-bottom:1px solid var(--bd)}
+.sg{display:flex;align-items:center;gap:8px}.sg label{display:flex;align-items:center;gap:7px;color:var(--mu);font-size:13px}
+.ic{position:relative;display:grid;place-items:center;width:36px;height:36px;padding:0;flex:none}.ic svg{display:block}
+.ic .dt{position:absolute;top:6px;right:6px;width:7px;height:7px;border-radius:50%;background:var(--bl)}.ic.pr .dt{background:#fff}
+.fx{padding:14px;border-bottom:1px solid var(--bd);animation:sl .2s ease}
+.fg{display:flex;flex-wrap:wrap;gap:16px}
+.fs{min-width:150px;flex:1 1 150px}
+.fs>b{display:block;font-size:11px;letter-spacing:.06em;color:var(--mu);margin-bottom:7px;text-transform:uppercase;font-weight:600}
+.cb2{display:flex;align-items:center;gap:8px;padding:4px 0;cursor:pointer;font-size:13px;color:#ddd;border-radius:6px}
+.cb2:hover{color:var(--tx)}
+input[type=checkbox]{appearance:none;-webkit-appearance:none;width:17px;height:17px;flex:none;border:1.5px solid #4a4a4a;border-radius:5px;background:transparent;cursor:pointer;position:relative;transition:background .15s,border-color .15s}
+input[type=checkbox]:checked{background:var(--bl);border-color:var(--bl)}
+input[type=checkbox]:checked::after{content:"";position:absolute;left:5px;top:1.5px;width:4px;height:9px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(42deg)}
+.ft{display:flex;justify-content:flex-end;margin-top:12px}
+.chips{display:flex;flex-wrap:wrap;gap:7px;padding:12px 14px;border-bottom:1px solid var(--bd);align-items:center}
+.chip{display:inline-flex;align-items:center;gap:7px;background:#1f1f1f;border:1px solid var(--bd);border-radius:20px;padding:4px 7px 4px 11px;font-size:12px;animation:pop .18s ease}
+.chip a{color:var(--mu);font-weight:700;line-height:1;padding:0 3px}.chip a:hover{color:var(--tx);text-decoration:none}
+.bulk{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:11px 14px;border-bottom:1px solid var(--bd);background:#0095f612;animation:sl .18s ease}
+.bulk b{margin-right:auto}.bulk button{padding:6px 12px;font-size:13px}
+.r,.h{display:grid;grid-template-columns:var(--cols);gap:10px;align-items:center;padding:10px 14px}
+.h{color:var(--mu);font-size:11px;letter-spacing:.06em;text-transform:uppercase;border-bottom:1px solid var(--bd);font-weight:600}
+.r{border-bottom:1px solid var(--bd2);transition:background .13s}.r:last-child{border:0}.r:hover{background:var(--sf2)}
+.r.on{background:#0095f60f}
+.uc{display:flex;align-items:center;gap:7px;min-width:0}
+.uc a{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14.5px}
+.bdg{font-size:10.5px;font-weight:600;border-radius:5px;padding:2px 6px;white-space:nowrap;flex:none}
+.kbd{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin:-6px 0 14px}
+.sk .uc a{color:var(--gn)}.sr2 .uc a{color:var(--rd)}
+.dts{display:contents}
+.dc{display:flex;flex-direction:column;line-height:1.3;min-width:0}.dc b{font-weight:500;font-size:13px}.dc em{font-style:normal;font-size:11px;color:#8a8a8a}
+.acts{display:flex;gap:6px;justify-content:flex-end}
+.ab{width:32px;height:32px;padding:0;display:grid;place-items:center;border-radius:9px;background:#1e1e1e;color:#7a7a7a;font-size:14px;line-height:1}
+.ab:hover{background:#2a2a2a;color:#bbb}
+.ab.k.on2{background:#3ddc8426;color:var(--gn)}.ab.x.on2{background:#ff4d4f26;color:var(--rd)}
+.pg{padding:14px;text-align:center}
+.empty{padding:34px 16px;text-align:center;color:var(--mu)}.empty b{display:block;color:var(--tx);margin-bottom:5px;font-size:15px}
+/* insights */
+.cds{display:grid;grid-template-columns:1fr;gap:10px;margin-top:12px}.cds .cd b{font-size:26px}
+.sc{background:var(--sf);border:1px solid var(--bd);border-radius:16px;padding:15px;margin-top:10px}
+.sh{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px}.sh h4{margin-right:auto}
+.sh select{padding:5px 8px;font-size:12px;border-radius:8px}
+.br{display:flex;align-items:center;gap:10px;margin:8px 0}.br>span{width:106px;flex:none;color:var(--mu);font-size:13px}.br>b{width:38px;text-align:right;font-size:13px}
+.bt{flex:1;display:flex;height:11px;background:#1c1c1c;border-radius:6px;overflow:hidden}
+.bt i{display:block;animation:gw .5s cubic-bezier(.2,.7,.3,1)}
+.stk{display:flex;height:15px;border-radius:8px;overflow:hidden;background:#1c1c1c}.stk i{animation:gf .5s cubic-bezier(.2,.7,.3,1)}
+.lgd{display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:11px;color:var(--mu);font-size:12.5px}
+.sw{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px}
+.dns{display:flex;gap:26px;flex-wrap:wrap}.dnw{display:flex;align-items:center;gap:14px}
+.dn2{width:94px;height:94px;border-radius:50%;display:grid;place-items:center;position:relative;flex:none}
+.dn2::before{content:"";position:absolute;inset:14px;background:var(--sf);border-radius:50%}.dn2 span{position:relative;font-weight:700;font-size:17px}
+.dl2 b{display:block;margin-bottom:3px}.dl2 div{font-size:12.5px}
+.cols{display:flex;gap:10px;align-items:flex-end;justify-content:center;height:172px;padding-top:18px}
+.col{flex:1 1 0;min-width:0;max-width:110px;height:100%;display:flex;flex-direction:column}.cb{flex:1;display:flex;align-items:flex-end;gap:2px}
+.cb i{flex:1;border-radius:4px 4px 0 0;min-height:2px;position:relative;animation:gh .5s cubic-bezier(.2,.7,.3,1)}
+.cb i::after{content:attr(data-v);position:absolute;bottom:calc(100% + 3px);left:50%;transform:translateX(-50%);font-size:10px;font-style:normal;color:#ccc}
+.col>span{text-align:center;color:var(--mu);font-size:11px;margin-top:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* changes */
+.ch{background:var(--sf);border:1px solid var(--bd);border-radius:16px;margin-top:10px;overflow:hidden}
+.ch summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:14px}
+.ch summary::-webkit-details-marker{display:none}.ch summary:hover{background:var(--sf2)}
+.ch summary b{font-size:15px}.ch .cv{color:var(--mu);font-size:12px;border:1px solid var(--bd);border-radius:20px;padding:2px 9px}
+.ch .ar{margin-left:auto;color:var(--mu);transition:transform .2s ease}.ch[open] .ar{transform:rotate(180deg)}
+.pills{display:flex;gap:6px;flex-wrap:wrap}
+.pill{font-size:12px;font-weight:600;border-radius:20px;padding:3px 10px}
+.pill.g{background:#3ddc8420;color:var(--gn)}.pill.r{background:#ff4d4f20;color:var(--rd)}.pill.n{background:#ffffff0f;color:var(--mu)}
+.cbody{padding:0 14px 6px;animation:sl .2s ease}
+.grp{padding:12px 0;border-top:1px solid var(--bd2)}
+.grp>span{display:block;color:var(--mu);font-size:12px;margin-bottom:8px}
+.ul{display:flex;flex-wrap:wrap;gap:6px}
+.ua{display:inline-block;background:#1c1c1c;border:1px solid var(--bd);border-radius:18px;padding:4px 11px;font-size:12.5px;font-weight:500;transition:background .15s,border-color .15s}
+.ua:hover{background:#262626;text-decoration:none;border-color:#3a3a3a}
+.ua.g{color:#8ff0bd}.ua.r{color:#ffb3b4}.ua.n{color:var(--mu)}
+/* toast + modal */
+#msg{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#242424;border:1px solid var(--bd);padding:9px 11px 9px 17px;border-radius:12px;z-index:60;animation:pop .2s ease;box-shadow:0 8px 24px #000a;max-width:92vw;display:flex;align-items:center;gap:14px}
+#msg button{padding:5px 12px;font-size:13px}
+.sset{border-top:1px solid var(--bd);padding:15px 0}.sset>b{display:block;margin-bottom:3px}
+.sset p{margin:0 0 11px;font-size:13px}.sset .row2{align-items:flex-end}
+.dng{color:var(--rd);border-color:#ff4d4f44}.dng:hover{background:#ff4d4f1a}
+#modal{position:fixed;inset:0;background:#000c;z-index:30;overflow:auto;padding:16px;display:flex;animation:fade .18s ease;backdrop-filter:blur(3px)}
+.mb{background:var(--sf);border:1px solid var(--bd);border-radius:18px;max-width:540px;width:100%;margin:auto;padding:20px;animation:pop .22s ease}
+.mb h3{margin:0 0 4px;font-size:19px}.mb p{margin:10px 0}
+.steps{counter-reset:s;margin:14px 0;padding:0;list-style:none}
+.steps li{counter-increment:s;position:relative;padding:0 0 13px 34px;font-size:13.5px;line-height:1.5}
+.steps li::before{content:counter(s);position:absolute;left:0;top:-1px;width:23px;height:23px;border-radius:50%;background:#262626;color:var(--mu);display:grid;place-items:center;font-size:11.5px;font-weight:700}
+.steps li:not(:last-child)::after{content:"";position:absolute;left:11px;top:25px;bottom:3px;width:1px;background:var(--bd)}
+.steps b{color:#fff}.steps em{font-style:normal;color:var(--mu)}
+.note{display:flex;gap:10px;background:#0095f610;border:1px solid #0095f633;border-radius:12px;padding:11px 13px;font-size:13px;line-height:1.5}
+.note svg{flex:none;margin-top:1px}
+.fld{display:flex;flex-direction:column;gap:6px;margin:14px 0}
+.fld>span{font-size:12px;color:var(--mu)}
+.row2{display:flex;gap:10px;flex-wrap:wrap}.row2>*{flex:1 1 150px}
+.drop{display:block;border:1.5px dashed #3a3a3a;border-radius:14px;padding:18px 16px;text-align:center;transition:border-color .15s,background .15s;cursor:pointer;margin:4px 0 12px}
+.drop:hover,.drop.ov{border-color:var(--bl);background:#0095f60d}
+.drop input{display:none}.drop b{display:block;margin-bottom:3px}
+.mact{display:flex;gap:9px;justify-content:flex-end;margin-top:16px}
+.err{color:var(--rd)}
+/* check popup */
+#ck{position:fixed;inset:0;background:#000e;z-index:40;display:flex;padding:calc(env(safe-area-inset-top,0px) + 18px) 16px 24px;overflow:auto;animation:fade .18s ease;backdrop-filter:blur(3px)}
+.kw{width:100%;max-width:440px;margin:auto;text-align:center}
+.kh{display:flex;gap:8px;justify-content:center;align-items:center;margin-bottom:12px}.kh select{padding:7px 10px;font-size:13px}
+.kfp{background:var(--sf);border:1px solid var(--bd);border-radius:14px;padding:14px;margin-bottom:12px;text-align:left;animation:sl .2s ease}
+.kc{background:var(--sf);border:1px solid var(--bd);border-radius:22px;padding:24px 22px;transition:transform .22s ease,opacity .22s ease,box-shadow .22s ease;animation:pop .22s ease}
+.kc.fk{transform:translateX(118%) rotate(11deg);opacity:0;box-shadow:0 0 0 3px var(--gn)}
+.kc.fr{transform:translateX(-118%) rotate(-11deg);opacity:0;box-shadow:0 0 0 3px var(--rd)}
+.kc.fs{transform:translateX(118%);opacity:0}
+.kn{font-size:25px;font-weight:700;word-break:break-all;margin:6px 0 16px}
+.kn a{text-decoration:underline;text-decoration-color:var(--bl);text-underline-offset:5px}
+.kd{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-top:1px solid var(--bd);text-align:left;font-size:13.5px}.kd span{color:var(--mu)}.kd b{text-align:right;font-weight:600}
+.tag{display:inline-block;padding:3px 11px;border-radius:14px;font-size:12px;font-weight:600}
+.tag.k{background:#3ddc8426;color:var(--gn)}.tag.r{background:#ff4d4f26;color:var(--rd)}
+.kp{margin:14px 0 0;color:var(--mu);font-size:13px}
+.prg{height:3px;background:#262626;border-radius:3px;margin-top:9px;overflow:hidden}.prg i{display:block;height:100%;background:var(--bl);transition:width .25s ease}
+.kb{display:flex;justify-content:center;gap:13px;margin:14px 0 12px}
+.rb{width:60px;height:60px;border-radius:50%;padding:0;font-size:24px;background:var(--sf);border:2px solid #3d3d3d;color:#b0b0b0;display:grid;place-items:center}
+.rb.g{border-color:var(--gn);color:var(--gn)}.rb.x{border-color:var(--rd);color:var(--rd)}
+.rb:hover{background:var(--sf2);transform:translateY(-2px)}.rb:active{transform:scale(.94)}
+#list.fade>*{animation:sl .22s ease}
+@keyframes sl{from{opacity:0;transform:translateY(-7px)}}
+@keyframes gw{from{width:0}}@keyframes gh{from{height:0}}@keyframes gf{from{flex-grow:0}}
+@keyframes pop{from{opacity:0;transform:scale(.97)}}
+@keyframes fade{from{opacity:0}}
+@media(max-width:700px){
+.logo{font-size:26px}
+#hd{position:static;background:var(--bg);padding:10px 0 12px}
+#tb button{padding:11px 10px;font-size:13.5px}
+.sel2{font-size:13px;padding:7px 8px}
+.r{grid-template-columns:28px minmax(0,1fr) auto;gap:5px 10px;padding:11px 12px}
+.h{display:none}
+.r>input{grid-row:1/span 2}
+.dts{display:flex;gap:7px 16px;flex-wrap:wrap;grid-column:2}
+.dc{flex-direction:row;align-items:baseline;gap:6px}.dc em::before{content:"· "}
+.acts{grid-column:3;grid-row:1/span 2}
+.cols{height:150px}.br>span{width:88px}
+.sr{flex-wrap:wrap}
+}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+</style></head><body><div class="w">
+<div id="hd"></div><div id="st"></div><div id="hb"></div><button class="pr big" data-a="check" id="ckb"></button><div id="tb"></div>
+<div id="bar"><input type="text" id="q" placeholder="Search usernames" autocomplete="off" spellcheck="false"></div>
+<div id="list"></div></div><div id="msg" hidden></div><div id="modal" hidden></div><div id="ck" hidden></div>
+<script>
+const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const url=u=>'https://www.instagram.com/'+encodeURIComponent(u)+'/';
+const st=m=>m.s||(m.k?'k':m.x?'r':'');
+const MN=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const D=t=>{if(!t)return'';const d=new Date(t*1000);return d.getDate()+' '+MN[d.getMonth()]+' '+d.getFullYear()};
+const rel=t=>{if(!t)return'Unknown';const s=Date.now()/1e3-t,d=s/86400;
+if(d<1)return'Today';if(d<2)return'Yesterday';if(d<31)return Math.round(d)+' days ago';
+const y=d/365.25;if(y<2){const mo=Math.max(1,Math.round(d/30.44));return mo+(mo===1?' month ago':' months ago')}return Math.round(y)+' years ago'};
+const FIC='<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M3 5h18l-7 8.2V21l-4-2.4v-5.4z" fill="currentColor"/></svg>';
+const SRCH='<svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>';
+const INF='<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="#0095f6" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 7.6v.4"/></svg>';
+
+const XF=[['close_friends','cf'],['blocked','bl'],['pending_follow_requests','pend'],['recent_follow_requests','req'],['recently_unfollowed','unf'],['favorit','fav']];
+const BDG={cf:['Close friend','#feda75','#3a2f10'],fav:['Favourite','#f08ac0','#3a1228'],bl:['Blocked','#ff8e8f','#3a1515'],pend:['Request pending','#7cc5ff','#10283a'],req:['Requested','#7cc5ff','#10283a'],unf:['Recently unfollowed','#bdbdbd','#242424']};
+const FKEYS=['cf','fav','pend','req','unf','bl'];
+const FPL={cf:'Close friends',fav:'Favourites',pend:'Follow requests pending',req:'Recent follow requests',unf:'Recently unfollowed',bl:'Blocked accounts'};
+const emptyFl=()=>({cf:{},fav:{},pend:{},req:{},unf:{},bl:{}});
+const hasFl=p=>FKEYS.some(k=>Object.keys((p.fl||{})[k]||{}).length);
+const FSEC=[
+{k:'dat',t:'Date',o:[['w30','Last 30 days'],['w90','Last 90 days'],['w180','Last 6 months'],['o365','Over 1 year ago'],['o1095','Over 3 years ago']]},
+{k:'usr',t:'Username',o:[['digits','Has numbers'],['sym','Has a dot or underscore'],['long','Over 15 characters'],['del','Deleted accounts']]},
+{k:'st',t:'Status',o:[['u','Unchecked'],['k','Kept'],['r','Removed']]},
+{k:'flg',t:'Lists',o:FKEYS.map(k=>[k,BDG[k][0]])},
+{k:'chk',t:'Checked',o:[['c30','In the last 30 days'],['o90','Over 3 months ago'],['o180','Over 6 months ago'],['o365','Over a year ago']]}];
+const FRESH=()=>FSEC.reduce((a,x)=>{a[x.k]=[];return a},{});
+const FLAB={};FSEC.forEach(s=>s.o.forEach(o=>FLAB[s.k+':'+o[0]]=o[1]));
+const SORTS=[['az','A to Z'],['za','Z to A'],['old','Oldest first'],['nw','Newest first'],['len','Username length']];
+const CKS=[['nofb','Unfollowers'],['fb','Mutuals'],['fans','Fans'],['pend','Requests']];
+const ckScopes=p=>CKS.filter(x=>x[0]!=='pend'||hasPend(p));
+
+const S={P:{},cur:'example_user',snap:-1,tab:'nofb',sort:'az',f:null,fo:false,sel:new Set(),n:200,up:false,ck:null,hid:{},
+cks:null,
+ins:{prog:'stack',who:'donut',yr:'cols',yrd:'fb',upl:'cols'},csort:'new',set:false,snapSel:-1};
+S.f=FRESH();S.cks=Object.assign(FRESH(),{scope:'nofb',sort:'shuffle',st:['u'],fo:false});
+
+/* ---------- example profile ---------- */
+const EX=(()=>{const a=['cristiano','leomessi','selenagomez','kyliejenner','therock','arianagrande','kimkardashian','beyonce','nike','natgeo'],
+b=['nasa','taylorswift','zendaya','billieeilish','dualipa','harrystyles','spotify','netflix','nba','vogue'],
+c=['mrbeast','khaby.lame','charlidamelio','addisonraee','lilnasx','kevinhart4real','chrishemsworth','priyankachopra','dojacat','sza'];
+const p={name:'example_user',date:'2026-11-18',fing:{},fers:{},meta:{natgeo:{s:'k'},nike:{s:'r'},beyonce:{s:'k'}},demo:1,
+log:[{d:'2026-11-18',pd:'2026-10-21',ga:['nasa','taylorswift'],gr:['oldfriend_99'],grT:{oldfriend_99:1700000000},fa:['natgeo'],fr:[],frT:{}},
+{d:'2026-10-21',pd:'2026-08-02',ga:['dualipa','harrystyles','spotify'],gr:['anon_user'],grT:{anon_user:1690000000},fa:['nike','therock'],fr:['randomguy_7'],frT:{randomguy_7:1660000000}}]};
+let t=Date.now()/1000-2.4e8;
+a.forEach(u=>p.fing[u]=t+=4e6);b.forEach(u=>{p.fing[u]=t+=4e6;p.fers[u]=t+=25e5});c.forEach(u=>p.fers[u]=t+=35e5);
+p.fing.cristiano=Date.now()/1000-1.9e8;p.fers.mrbeast=Date.now()/1000-12*86400;p.fers.sza=Date.now()/1000-70*86400;
+return p})();
+S.P.example_user=EX;
+
+/* ---------- data helpers ---------- */
+const cp=()=>S.P[S.cur];
+function stateAt(p,j){const fing=Object.assign({},p.fing),fers=Object.assign({},p.fers);
+for(let i=0;i<=j;i++){const g=p.log[i];if(!g)break;
+(g.fa||[]).forEach(u=>delete fing[u]);(g.fr||[]).forEach(u=>fing[u]=(g.frT||{})[u]||0);
+(g.ga||[]).forEach(u=>delete fers[u]);(g.gr||[]).forEach(u=>fers[u]=(g.grT||{})[u]||0)}
+return{fing,fers}}
+let EC={k:'',v:null};
+function ef(){const p=cp(),k=S.cur+'|'+S.snap+'|'+p.date+'|'+p.log.length+'|'+Object.keys(p.fing).length;
+if(EC.k!==k)EC={k,v:stateAt(p,S.snap)};return EC.v}
+const L=(e,p)=>{const F=Object.keys(e.fing);return{nofb:F.filter(u=>!(u in e.fers)),fb:F.filter(u=>u in e.fers),fans:Object.keys(e.fers).filter(u=>!(u in e.fing)),pend:Object.keys(((p||cp()).fl||{}).pend||{})}};
+const pendT=(p,u)=>((p.fl||{}).pend||{})[u];
+const hasPend=p=>!!Object.keys(((p||cp()).fl||{}).pend||{}).length;
+const live=()=>S.snap===-1;
+const ck=g=>g.d+'|'+(g.pd||'');
+const snaps=p=>[[-1,'Latest · '+D2(p.date)]].concat(p.log.map((g,i)=>[i,D2(g.pd)]).filter(x=>x[1]));
+function D2(s){if(!s)return'';const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(s);return m?(+m[3])+' '+MN[+m[2]-1]+' '+m[1]:s}
+const snapDate=p=>S.snap===-1?p.date:(p.log[S.snap]||{}).pd||'';
+
+const tests=(u,t,now,fl,m)=>({chk:(function(){const has=!!st(m||{}),age=(now-((m||{}).t||0))/86400;
+return{c30:has&&age<=30,o90:has&&age>=90,o180:has&&age>=180,o365:has&&age>=365}})(),dat:{w30:(now-t)/86400<=30,w90:(now-t)/86400<=90,w180:(now-t)/86400<=180,o365:(now-t)/86400>=365,o1095:(now-t)/86400>=1095},
+usr:{digits:/\d/.test(u),sym:/[._]/.test(u),long:u.length>15,del:u.startsWith('__deleted__')},
+flg:FKEYS.reduce((a,k)=>{a[k]=!!((fl||{})[k]||{})[u];return a},{})});
+const flagsOf=(p,u)=>FKEYS.filter(k=>((p.fl||{})[k]||{})[u]);
+const okF=(arr,map)=>!arr.length||arr.some(v=>map[v]);
+function match(u,ts,f,m,now,fl){if(f.st.length&&!f.st.includes(st(m||{})||'u'))return false;
+const T=tests(u,ts,now,fl,m);if(!ts&&f.dat.length)return false;
+return okF(f.dat,T.dat)&&okF(f.usr,T.usr)&&okF(f.flg||[],T.flg)&&okF(f.chk||[],T.chk)}
+
+function view(){const p=cp(),e=ef(),q=($('#q').value||'').trim().toLowerCase(),now=Date.now()/1e3,
+t=u=>S.tab==='fans'?e.fers[u]:S.tab==='pend'?pendT(p,u):e.fing[u],
+a=(L(e,p)[S.tab]||[]).filter(u=>(!q||u.includes(q))&&match(u,t(u),S.f,p.meta[u]||{},now,p.fl)),
+c={az:(x,y)=>x<y?-1:1,za:(x,y)=>x<y?1:-1,old:(x,y)=>t(x)-t(y),nw:(x,y)=>t(y)-t(x),len:(x,y)=>x.length-y.length||(x<y?-1:1),
+yo:(x,y)=>e.fers[x]-e.fers[y],yn:(x,y)=>e.fers[y]-e.fers[x]},
+k2=(/^y/.test(S.sort)&&S.tab!=='fb')?'az':S.sort;
+return a.sort(c[k2]||c.az)}
+
+/* ---------- storage ---------- */
+let coll=null,mt,persist='checking';
+const dataKB=()=>{let b=0;Object.keys(S.P).forEach(k=>{if(!S.P[k].demo)b+=JSON.stringify(S.P[k]).length});return Math.round(b/1024)};
+async function storageInfo(){try{if(!navigator.storage||!navigator.storage.persist)return persist='unknown';
+persist=await navigator.storage.persisted()?'yes':(await navigator.storage.persist()?'yes':'no')}
+catch(e){persist='unknown'}}
+let undoFn=null;
+function say(t,undo){const m=$('#msg');undoFn=undo||null;
+m.innerHTML='<span></span>'+(undo?'<button class="gh" data-a="undo">Undo</button>':'');
+m.firstChild.textContent=t;m.hidden=!t;clearTimeout(mt);
+if(t)mt=setTimeout(()=>{m.hidden=true;undoFn=null},undo?7000:4000)}
+let pend=null;
+const sv=n=>{pend=n;clearTimeout(sv.t);sv.t=setTimeout(()=>{sv.t=null;save(n)},400)};
+const flush=()=>{if(sv.t){clearTimeout(sv.t);sv.t=null;const p=S.P[pend];
+if(p&&!p.demo){try{localStorage.setItem('ig_'+pend,JSON.stringify(p));localStorage.setItem('ig_idx',JSON.stringify(Object.keys(S.P).filter(k=>!S.P[k].demo)))}catch(e){}}
+save(pend)}};
+addEventListener('pagehide',flush);
+addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')flush()});
+async function save(n){const p=S.P[n];if(!p||p.demo)return;const ix=Object.keys(S.P).filter(k=>!S.P[k].demo),j=JSON.stringify(p);
+try{if(coll){await coll.doc('p_'+n).set({j});await coll.doc('index').set({n:ix})}else{localStorage.setItem('ig_'+n,j);localStorage.setItem('ig_idx',JSON.stringify(ix))}}
+catch(e){say('Couldn’t save: '+(e.message||e))}}
+async function load(){try{let ns=[];
+if(coll){const i=await coll.doc('index').get();ns=i.exists?i.data().n||[]:[];
+for(const n of ns){const d=await coll.doc('p_'+n).get();if(d.exists)S.P[n]=JSON.parse(d.data().j)}}
+else{ns=JSON.parse(localStorage.getItem('ig_idx')||'[]');ns.forEach(n=>{const j=localStorage.getItem('ig_'+n);if(j)S.P[n]=JSON.parse(j)})}
+if(ns.length&&S.P[ns[0]])S.cur=ns[0]}catch(e){}render()}
+
+/* ---------- parsing ---------- */
+function splitCSV(t){const rows=[];let row=[],cur='',q=false;
+for(let i=0;i<t.length;i++){const c=t[i];
+if(q){if(c==='"'){if(t[i+1]==='"'){cur+='"';i++}else q=false}else cur+=c}
+else if(c==='"')q=true;else if(c===','){row.push(cur);cur=''}
+else if(c==='\n'){row.push(cur);cur='';rows.push(row);row=[]}
+else if(c!=='\r')cur+=c}
+if(cur!==''||row.length){row.push(cur);rows.push(row)}
+return rows.filter(r=>r.length>1||r[0]!=='')}
+function fromCSV(t){const rows=splitCSV(t);if(!rows.length)return null;
+const H=rows[0].map(x=>x.trim().toLowerCase()),ix=k=>H.indexOf(k);
+if(ix('username')<0)return null;
+const iU=ix('username'),iR=ix('relationship'),iF=ix('you_followed'),iY=ix('they_followed_you'),iS=ix('status'),iL=ix('flags'),
+ts=v=>{const d=Date.parse((v||'').trim()+'T00:00:00Z');return isNaN(d)?0:d/1e3},
+SN={kept:'k',removed:'r'},out={fing:{},fers:{},meta:{},fl:emptyFl()};
+rows.slice(1).forEach(r=>{const u=(r[iU]||'').trim().toLowerCase();if(!u||u==='username')return;
+const rel=(r[iR]||'').trim().toLowerCase(),a=iF>=0?ts(r[iF]):0,b=iY>=0?ts(r[iY]):0;
+if(rel==='mutual'||rel==='unfollower'||(!rel&&a))out.fing[u]=a;
+if(rel==='mutual'||rel==='fan'||(!rel&&b))out.fers[u]=b;
+const st2=SN[(r[iS]||'').trim().toLowerCase()];if(st2)out.meta[u]={s:st2};
+if(iL>=0)(r[iL]||'').split(';').map(x=>x.trim()).filter(Boolean).forEach(k=>{if(out.fl[k])out.fl[k][u]=1})});
+return (Object.keys(out.fing).length||Object.keys(out.fers).length)?out:null}
+function parse(n,t){const b=n.split('/').pop();
+if(/\.csv$/i.test(b)){const c=fromCSV(t);return c?{k:'csv',m:c}:null}
+const k=/^followers/i.test(b)?'fers':/^following/i.test(b)?'fing':(XF.find(x=>b.toLowerCase().indexOf(x[0])>=0)||[])[1]||null;
+if(!k)return null;const m={};
+if(/\.json$/i.test(n)){let j=JSON.parse(t);if(!Array.isArray(j))j=j.relationships_following||Object.values(j)[0]||[];
+(j||[]).forEach(e=>{const s=(e.string_list_data||[])[0]||{},u=(e.title||s.value||'').toLowerCase();if(u)m[u]=s.timestamp||0})}
+else{const SKIP=/^(p|reel|reels|tv|explore|stories|accounts|direct|about|legal|privacy|terms|developer|directory|help|press|api)$/;
+new DOMParser().parseFromString(t,'text/html').querySelectorAll('a[href*="instagram.com"]').forEach(a=>{
+const h=(a.getAttribute('href')||'').split('?')[0].replace(/\/+$/,''),mm=/instagram\.com\/(?:_u\/)?([A-Za-z0-9._]+)$/.exec(h);
+if(!mm)return;const u=mm[1].toLowerCase();if(SKIP.test(u))return;
+const d=Date.parse((a.parentElement&&a.parentElement.nextElementSibling||{}).textContent||'');
+m[u]=isNaN(d)?0:d/1e3})}
+return{k,m}}
+async function doImport(){const psel=$('#pf'),isNew=psel.value==='__new'||(!psel.value&&!$('#nw').hidden),
+nm=(isNew?$('#un').value:psel.value).trim().toLowerCase().replace(/^@/,'').replace(/[^a-z0-9._]/g,''),
+fs=upFiles,ms=$('#ms');
+if(!nm||nm==='example_user'){ms.innerHTML='<span class="err">'+(isNew?'Enter the username this export belongs to.':'Choose a profile, or add a new one.')+'</span>';return}
+if(!fs.length){ms.innerHTML='<span class="err">Choose your export file first.</span>';return}
+if(fs.some(f=>/\.zip$/i.test(f.name))&&typeof JSZip==='undefined'){ms.innerHTML='<span class="err">Zip files need a library that didn’t load. Reload the page, or unzip it and add followers_1.json and following.json instead.</span>';return}
+ms.textContent='Reading files…';
+const got={};try{for(const f of fs){const items=[];
+if(/\.zip$/i.test(f.name)){const z=await JSZip.loadAsync(f);
+for(const e of Object.values(z.files)){const b=e.name.split('/').pop();
+if(!e.dir&&!/^[._]/.test(b)&&(/^(followers_?\d*|following)\.(json|html)$/i.test(b)||XF.some(x=>b.toLowerCase().indexOf(x[0])>=0)))items.push([e.name,await e.async('string')])}}
+else items.push([f.name,await f.text()]);
+items.forEach(([n,t])=>{const r=parse(n,t);if(!r)return;
+if(r.k==='csv')got.csv=r.m;else if(Object.keys(r.m).length)got[r.k]=Object.assign(got[r.k]||{},r.m)})}}
+catch(e){ms.innerHTML='<span class="err">Couldn’t read those files: '+esc(e.message||'')+'</span>';return}
+if(got.csv){got.fing=got.fing||got.csv.fing;got.fers=got.fers||got.csv.fers}
+if(!got.fing&&!got.fers){ms.innerHTML='<span class="err">No account lists found in those files. Upload followers and following from your Instagram export, or a CSV you exported here.</span>';return}
+const old=S.P[nm],P=old||{name:nm,fing:{},fers:{},meta:{},log:[]},d=$('#dt').value||new Date().toISOString().slice(0,10),
+df=(a,b)=>Object.keys(a).filter(u=>!(u in b)),ts=(o,k)=>{const r={};k.forEach(u=>r[u]=o[u]||0);return r};
+let reset=[];
+if(old){const g={d,pd:old.date,fa:got.fing?df(got.fing,P.fing):[],fr:got.fing?df(P.fing,got.fing):[],ga:got.fers?df(got.fers,P.fers):[],gr:got.fers?df(P.fers,got.fers):[]};
+g.frT=ts(P.fing,g.fr);g.grT=ts(P.fers,g.gr);
+const nF2=got.fing||P.fing,nE2=got.fers||P.fers,rel=(f,e2,u)=>(u in f?1:0)+(u in e2?2:0);
+Object.keys(P.meta).forEach(u=>{if(!st(P.meta[u]))return;
+if(rel(P.fing,P.fers,u)!==rel(nF2,nE2,u)){delete P.meta[u].s;delete P.meta[u].k;delete P.meta[u].x;delete P.meta[u].t;reset.push(u)}});
+g.rs=reset;
+if(g.fa.length+g.fr.length+g.ga.length+g.gr.length)P.log.unshift(g)}
+if(got.fing)P.fing=got.fing;if(got.fers)P.fers=got.fers;P.date=d;
+P.fl=P.fl||emptyFl();FKEYS.forEach(k=>{if(got[k])P.fl[k]=got[k]});
+if(got.csv){P.fl=got.csv.fl;Object.keys(got.csv.meta).forEach(u=>P.meta[u]=got.csv.meta[u])}
+const nFl=FKEYS.reduce((a,k)=>a+Object.keys(P.fl[k]||{}).length,0);
+S.P[nm]=P;S.cur=nm;S.snap=-1;S.tab='nofb';S.sel.clear();S.up=false;upFiles=[];EC.k='';
+$('#modal').innerHTML='';render();save(nm);
+const nFo=Object.keys(P.fers).length;
+say('Imported '+Object.keys(P.fing).length+' following and '+nFo+(nFo===1?' follower':' followers')+(nFl?', plus '+nFl+' from your other lists':'')
++(reset.length?' · '+reset.length+' mark'+(reset.length>1?'s':'')+' cleared because the relationship changed':''))}
+
+/* ---------- charts ---------- */
+const sw=(c,t)=>'<span><i class="sw" style="background:'+c+'"></i>'+t+'</span>';
+const lgd=parts=>'<div class="lgd">'+parts.map(p=>sw(p.c,p.n)).join('')+'</div>';
+const tot=r=>r.p.reduce((a,x)=>a+x.v,0);
+function bars(rows){const mx=Math.max(1,...rows.map(tot));
+return rows.map(r=>'<div class="br"><span>'+esc(r.l)+'</span><div class="bt">'+r.p.map(x=>'<i style="width:'+(x.v/mx*100)+'%;background:'+x.c+'" title="'+esc(x.n)+': '+x.v+'"></i>').join('')+'</div><b>'+tot(r)+'</b></div>').join('')}
+function stack(rows){return rows.map(r=>{const t=tot(r)||1;
+return '<div style="margin:10px 0"><div class="br" style="margin:0 0 6px"><span style="width:auto;flex:1">'+esc(r.l)+'</span><b style="width:auto">'+tot(r)+'</b></div><div class="stk">'+r.p.map(x=>'<i style="flex:'+x.v+' 0 0;background:'+x.c+'" title="'+esc(x.n)+': '+x.v+'"></i>').join('')+'</div></div>'}).join('')}
+function cols(rows){const mx=Math.max(1,...rows.map(r=>Math.max(...r.p.map(x=>x.v))));
+return '<div class="cols">'+rows.map(r=>'<div class="col"><div class="cb">'+r.p.map(x=>'<i data-v="'+(x.v||'')+'" style="height:'+(x.v/mx*100)+'%;background:'+x.c+'" title="'+esc(x.n)+': '+x.v+'"></i>').join('')+'</div><span>'+esc(r.l)+'</span></div>').join('')+'</div>'}
+function donuts(rows){return '<div class="dns">'+rows.map(r=>{const t=tot(r)||1;let acc=0;
+const stops=r.p.map(x=>{const a=acc/t*100;acc+=x.v;return x.c+' '+a+'% '+(acc/t*100)+'%'}).join(',');
+const mid=r.cv!=null?r.cv:Math.round(r.p[0].v/t*100);
+return '<div class="dnw"><div class="dn2" style="background:conic-gradient('+stops+')"><span>'+mid+'%</span></div><div class="dl2"><b>'+esc(r.l)+'</b>'+r.p.map(x=>'<div class="mu">'+sw(x.c,x.n+' '+x.v)+'</div>').join('')+'</div></div>'}).join('')+'</div>'}
+const DRAW={bars,stack,cols,donut:donuts};
+function chartCard(id,title,rows,types,extra){const t=S.ins[id],o=(sel,v,a)=>'<select data-ins="'+id+(sel==='d'?'d':'')+'">'+a.map(x=>'<option value="'+x[0]+'" '+(v===x[0]?'selected':'')+'>'+x[1]+'</option>').join('')+'</select>';
+return '<div class="sc"><div class="sh"><h4>'+title+'</h4>'+(extra||'')+o('t',t,types)+'</div>'+(DRAW[t]||bars)(rows)+lgd(rows[0].p)+'</div>'}
+
+function ins(e,l){const p=cp(),F=Object.keys(e.fing),R=Object.keys(e.fers),nF=Math.max(1,F.length),sc={'':0,k:0,r:0},yr={},gy={};
+l.nofb.forEach(u=>sc[st(p.meta[u]||{})]++);
+F.forEach(u=>{const t=e.fing[u];if(t){const y=new Date(t*1e3).getFullYear();(yr[y]=yr[y]||[0,0])[u in e.fers?0:1]++}});
+R.forEach(u=>{const t=e.fers[u];if(t){const y=new Date(t*1e3).getFullYear();gy[y]=(gy[y]||0)+1}});
+const years=[...new Set(Object.keys(yr).concat(Object.keys(gy)))].sort(),yv=y=>yr[y]||[0,0],
+C={g:'var(--gn)',r:'var(--rd)',b:'var(--bl)',p:'var(--pk)',n:'#3a3a3a'},
+rate=Math.round(l.fb.length/nF*100),
+prog=[{l:'Reviewed',cv:Math.round((sc.k+sc.r)/Math.max(1,l.nofb.length)*100),p:[{v:sc.k,c:C.g,n:'Kept'},{v:sc.r,c:C.r,n:'Removed'},{v:sc[''],c:C.n,n:'Unchecked'}]}],
+progB=[{l:'Kept',p:[{v:sc.k,c:C.g,n:'Kept'}]},{l:'Removed',p:[{v:sc.r,c:C.r,n:'Removed'}]},{l:'Unchecked',p:[{v:sc[''],c:C.n,n:'Unchecked'}]}],
+who=[{l:'Accounts you follow',p:[{v:l.fb.length,c:C.b,n:'Follow you back'},{v:l.nofb.length,c:C.r,n:'Don’t follow back'}]},
+{l:'Your followers',p:[{v:l.fb.length,c:C.b,n:'You follow back'},{v:l.fans.length,c:C.p,n:'Fans'}]}],
+yrRows=years.map(y=>S.ins.yrd==='fb'
+?{l:"'"+String(y).slice(2),p:[{v:yv(y)[0],c:C.b,n:'Follows you back'},{v:yv(y)[1],c:C.r,n:'Doesn’t follow back'}]}
+:{l:"'"+String(y).slice(2),p:[{v:yv(y)[0]+yv(y)[1],c:C.b,n:'You followed'},{v:gy[y]||0,c:C.p,n:'Followed you'}]}),
+vis=p.log.slice(S.snap+1),
+upl=vis.map(g=>({l:D2(g.d),p:[{v:g.ga.length,c:C.g,n:'Followers gained'},{v:g.gr.length,c:C.r,n:'Followers lost'}]})),
+cd=(a,b)=>'<div class="cd"><b>'+a+'</b><span class="mu">'+b+'</span></div>';
+return '<div class="cds">'+cd(rate+'%','of the accounts you follow follow you back')+'</div>'
++chartCard('prog','Review progress',S.ins.prog==='bars'?progB:prog,[['stack','Stacked'],['bars','Bars'],['donut','Donut']])
++chartCard('who','Who follows whom',who,[['donut','Donut'],['bars','Bars'],['stack','Stacked']])
++(years.length?chartCard('yr','By year',yrRows,[['cols','Columns'],['bars','Bars'],['stack','Stacked']],
+'<select data-insd="yr">'+[['fb','Follow-back split'],['act','Followed vs followed you']].map(x=>'<option value="'+x[0]+'" '+(S.ins.yrd===x[0]?'selected':'')+'>'+x[1]+'</option>').join('')+'</select>'):'')
++(upl.length?chartCard('upl','Followers per upload',upl,[['cols','Columns'],['bars','Bars'],['stack','Stacked']]):'')
++(hasFl(p)?'<div class="sc"><div class="sh"><h4>Other lists in your export</h4></div>'
++FKEYS.filter(k=>Object.keys((p.fl||{})[k]||{}).length).map(k=>{const us=Object.keys(p.fl[k]);
+return '<div class="grp"><span>'+FPL[k]+' ('+us.length+')</span><div class="ul">'
++us.slice(0,60).map(u=>'<a class="ua" href="'+url(u)+'" target="_blank" rel="noopener noreferrer">'+esc(u)+'</a>').join('')
++(us.length>60?'<span class="mu" style="align-self:center">+'+(us.length-60)+' more</span>':'')+'</div></div>'}).join('')+'</div>':'')}
+
+/* ---------- changes ---------- */
+function chg(p){const vis=p.log.slice(S.snap+1).map((g,i)=>g).slice();
+const cnt=g=>g.ga.length+g.gr.length+g.fa.length+g.fr.length;
+if(S.csort==='old')vis.reverse();else if(S.csort==='most')vis.sort((a,b)=>cnt(b)-cnt(a));
+if(!vis.length)return '<div class="card"><div class="empty"><b>No changes yet</b>Upload a newer export for this profile and the differences will appear here.</div></div>';
+const all=vis.every(g=>S.hid[ck(g)]),
+GR=[['ga','New followers','g'],['gr','Lost followers','r'],['fa','You started following','g'],['fr','You unfollowed','r'],['rs','Back to unchecked, because the relationship changed','n']];
+return '<div class="sr" style="border:0;padding:16px 2px 6px"><span class="mu">'+vis.length+' upload'+(vis.length>1?'s':'')+'</span><div class="sg"><label>Sort<select data-csort="1">'
++[['new','Newest first'],['old','Oldest first'],['most','Most changes']].map(x=>'<option value="'+x[0]+'" '+(S.csort===x[0]?'selected':'')+'>'+x[1]+'</option>').join('')
++'</select></label><button class="gh" data-a="hall">'+(all?'Expand all':'Collapse all')+'</button></div></div>'
++vis.map(g=>{const k=ck(g),n=cnt(g),
+fw=n2=>n2===1?' follower':' followers',
+pills=[['+'+g.ga.length+fw(g.ga.length),g.ga.length,'g'],['−'+g.gr.length+fw(g.gr.length),g.gr.length,'r'],['+'+g.fa.length+' following',g.fa.length,'g'],['−'+g.fr.length+' following',g.fr.length,'r']]
+.concat(g.rs&&g.rs.length?[[g.rs.length+' reset',g.rs.length,'n']]:[])
+.filter(x=>x[1]).map(x=>'<span class="pill '+x[2]+'">'+x[0]+'</span>').join('')||'<span class="pill n">No changes</span>';
+return '<details class="ch" data-k="'+esc(k)+'" '+(S.hid[k]?'':'open')+'><summary><b>'+D2(g.d)+'</b><span class="cv">'+(g.pd?'since '+D2(g.pd):'first upload')+'</span><span class="pills">'+pills+'</span><span class="ar">▾</span></summary>'
++((n||(g.rs||[]).length)?'<div class="cbody">'+GR.filter(x=>(g[x[0]]||[]).length).map(([key,t,c])=>'<div class="grp"><span>'+t+' ('+g[key].length+')</span><div class="ul">'
++g[key].slice(0,120).map(u=>'<a class="ua '+c+'" href="'+url(u)+'" target="_blank" rel="noopener noreferrer">'+esc(u)+'</a>').join('')
++(g[key].length>120?'<span class="mu" style="align-self:center">+'+(g[key].length-120)+' more</span>':'')+'</div></div>').join('')+'</div>':'')
++'</details>'}).join('')}
+
+/* ---------- filter panel ---------- */
+function fpanel(store,attr){const SS=FSEC.filter(x=>x.k!=='flg'||hasFl(cp()));
+return '<div class="fx"><div class="fg">'+SS.map(s=>'<div class="fs"><b>'+s.t+'</b>'
++s.o.map(o=>'<label class="cb2"><input type="checkbox" data-'+attr+'="'+s.k+'" value="'+o[0]+'" data-fid="'+attr+s.k+o[0]+'" '+(store[s.k].includes(o[0])?'checked':'')+'>'+o[1]+'</label>').join('')+'</div>').join('')
++'</div><div class="ft"><button class="gh" data-a="'+(attr==='f'?'fclr':'kclr')+'">Clear filters</button></div></div>'}
+const nF=s=>FSEC.reduce((a,x)=>a+((s[x.k]||[]).length),0);
+
+/* ---------- render ---------- */
+function render(){const p=cp(),e=ef(),l=L(e,p),F=Object.keys(e.fing).length,R=Object.keys(e.fers).length,
+names=Object.keys(S.P),sn=snaps(p),pv=stateAt(p,S.snap+1),hasPv=!!p.log[S.snap+1],
+lt=S.tab==='chg'||S.tab==='ins',ed=live();
+const af=document.activeElement,fid=af&&af.getAttribute?af.getAttribute('data-fid'):null,ss=af&&af.selectionStart;
+
+$('#hd').innerHTML='<span class="logo">Unfollowers</span>'
++'<select class="sel2" data-p="1" aria-label="Profile">'+names.map(n=>'<option value="'+esc(n)+'" '+(n===S.cur?'selected':'')+'>@'+esc(n)+'</option>').join('')+'</select>'
++'<select class="sel2" data-sn="1" aria-label="Snapshot">'+sn.map(x=>'<option value="'+x[0]+'" '+(S.snap===x[0]?'selected':'')+'>'+esc(x[1])+'</option>').join('')+'</select>'
++'<button class="ic gh" data-a="set" title="Settings" aria-label="Settings"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 14.6a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-2.7 1.1v.2a2 2 0 1 1-4 0v-.1a1.6 1.6 0 0 0-2.8-1.1l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0-1.1-2.7h-.2a2 2 0 1 1 0-4h.1a1.6 1.6 0 0 0 1.1-2.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3h.1A1.6 1.6 0 0 0 10 2.6v-.2a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 2.7 1.1l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0 1.1 2.7h.2a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.3 1.5z"/></svg></button>'
++'<button class="pr" data-a="up">Upload</button>';
+
+$('#st').innerHTML=[[F,'Following'],[R,'Followers']].map((x,i)=>{const d=hasPv?x[0]-(i?Object.keys(pv.fers).length:Object.keys(pv.fing).length):0;
+return '<div class="cd"><b>'+x[0]+'</b><span class="mu">'+x[1]+'</span>'+(hasPv?'<i class="'+(d>0?'up':d<0?'dn':'fl')+'">'+(d>0?'▲ +'+d:d<0?'▼ '+d:'– 0')+'</i>':'')+'</div>'}).join('');
+
+$('#hb').innerHTML=ed?'':'<div class="hist"><span>Viewing your data as it was on '+D2(snapDate(p))+'. Checking and uploading are off while you look back.</span><button data-a="latest">Back to latest</button></div>';
+
+if(S.cks.scope==='pend'&&!l.pend.length)S.cks.scope='nofb';
+const scope=(CKS.find(x=>x[0]===S.cks.scope)||CKS[0])[1],unc=(l[S.cks.scope]||[]).filter(u=>!st(p.meta[u]||{})&&!u.startsWith('__deleted__')).length;
+$('#ckb').innerHTML='<span>✓</span> Check '+scope+(unc?' <span class="mu" style="font-weight:600">· '+unc+' left</span>':'');
+$('#ckb').disabled=!unc||!ed;
+
+$('#tb').innerHTML=[['nofb','Unfollowers',l.nofb.length],['fb','Mutuals',l.fb.length],['fans','Fans',l.fans.length]]
+.concat(l.pend.length?[['pend','Requests',l.pend.length]]:[]).concat([['chg','Changes',''],['ins','Insights','']])
+.map(x=>'<button data-a="tab" data-t="'+x[0]+'" class="'+(S.tab===x[0]?'on':'')+'">'+x[1]+(x[2]!==''?'<span class="n">'+x[2]+'</span>':'')+'</button>').join('');
+$('#bar').hidden=lt;
+
+let h='';
+if(S.tab==='chg')h=chg(p);
+else if(S.tab==='ins')h=ins(e,l);
+else{const v=view(),dl=S.tab==='fans'?'Followed you':S.tab==='pend'?'Requested':'Followed',
+C=S.tab==='nofb'?[['Followed',u=>e.fing[u]]]:S.tab==='fb'?[['Followed',u=>e.fing[u]],['Followed you',u=>e.fers[u]]]:S.tab==='pend'?[['Requested',u=>pendT(p,u)]]:[['Followed you',u=>e.fers[u]]],
+shown=v.slice(0,S.n),selV=v.filter(u=>S.sel.has(u)),chips=[];
+FSEC.forEach(s=>S.f[s.k].forEach(o=>chips.push('<span class="chip">'+FLAB[s.k+':'+o]+'<a href="#" data-a="unf" data-k="'+s.k+'" data-v="'+o+'" aria-label="Remove filter">×</a></span>')));
+const sorts=SORTS.map(x=>[x[0],x[0]==='old'?dl+': oldest first':x[0]==='nw'?dl+': newest first':x[1]])
+.concat(S.tab==='fb'?[['yo','Followed you: oldest'],['yn','Followed you: newest']]:[]);
+h=(S.tab==='pend'?'<p class="mu" style="margin:14px 0 0;font-size:13px">Follow requests you sent that haven’t been accepted. Open a profile and tap <b>Requested</b> to cancel it.</p>':'')
++'<div class="card" style="--cols:'+(ed?'30px ':'')+'minmax(0,1fr) '+'150px '.repeat(C.length)+(ed?'80px':'0px')+'">'
++'<div class="sr"><span class="mu">'+v.length+(v.length===1?' account':' accounts')+(S.f.st.length?'':' · '+v.filter(u=>!st(p.meta[u]||{})).length+' unchecked')+'</span>'
++'<div class="sg"><button data-a="lf" class="ic'+(S.fo?' pr':'')+'" data-fid="lf" title="Filters" aria-label="Filters" aria-expanded="'+S.fo+'">'+FIC+(nF(S.f)?'<i class="dt"></i>':'')+'</button>'
++'<label>Sort<select data-sort="1" data-fid="sort">'+sorts.map(o=>'<option value="'+o[0]+'" '+(S.sort===o[0]?'selected':'')+'>'+o[1]+'</option>').join('')+'</select></label></div></div>'
++(S.fo?fpanel(S.f,'f'):'')
++(chips.length?'<div class="chips">'+chips.join('')+'<button class="gh" data-a="fclr" style="padding:4px 11px;font-size:12px">Clear all</button></div>':'')
++(selV.length?'<div class="bulk"><b>'+selV.length+' selected</b><button data-a="bk">✓ Keep</button><button data-a="br">✕ Remove</button><button class="gh" data-a="bu">Clear status</button><button class="gh" data-a="bn">Deselect</button></div>':'')
++'<div class="h">'+(ed?'<input type="checkbox" data-all="1" data-fid="all" aria-label="Select all" '+(v.length&&selV.length===v.length?'checked':'')+'>':'')+'<span>Username</span>'+C.map(c=>'<span>'+c[0]+'</span>').join('')+(ed?'<span></span>':'')+'</div>'
++(v.length?shown.map((u,i)=>row(u,p,C,i,ed)).join(''):'<div class="empty"><b>Nothing here</b>'+(q0()?'No usernames match your search.':nF(S.f)?'No accounts match these filters.':S.tab==='pend'?'No pending follow requests in your export.':'This list is empty.')+'</div>')
++'</div>'
++(v.length>S.n?'<div class="pg"><button class="gh" data-a="more">Show '+Math.min(200,v.length-S.n)+' more · '+(v.length-S.n)+' hidden</button></div>':'')}
+$('#list').className=(S.tab!==lastTab?'fade':'');lastTab=S.tab;
+$('#list').innerHTML=h;
+if(fid){const n2=document.querySelector('[data-fid="'+fid+'"]');if(n2&&n2.focus){n2.focus();if(ss!=null&&n2.setSelectionRange)try{n2.setSelectionRange(ss,ss)}catch(e){}}}
+const mk=S.up?'up':S.set?'set':null;
+if(mk==='up'){if(mKind!=='up')$('#modal').innerHTML=upModal()}
+else if(mk==='set')$('#modal').innerHTML=setModal();
+else $('#modal').innerHTML='';
+mKind=mk;$('#modal').hidden=!mk}
+let mKind=null,lastTab=null;
+const q0=()=>(($('#q')||{}).value||'').trim();
+
+function row(u,p,C,i,ed){const s=st(p.meta[u]||{}),dl=u.startsWith('__deleted__'),se=S.sel.has(u);
+return '<div class="r'+(s==='k'?' sk':s==='r'?' sr2':'')+(se?' on':'')+'">'
++(ed?'<input type="checkbox" data-sel="'+esc(u)+'" data-i="'+i+'" data-fid="s'+esc(u)+'" aria-label="Select '+esc(u)+'" '+(se?'checked':'')+'>':'')
++'<div class="uc">'+(dl?'<span class="mu">Deleted account</span>':'<a href="'+url(u)+'" target="_blank" rel="noopener noreferrer">'+esc(u)+'</a>')
++flagsOf(p,u).filter(k=>!(k==='pend'&&S.tab==='pend')).map(k=>'<span class="bdg" style="color:'+BDG[k][1]+';background:'+BDG[k][2]+'">'+BDG[k][0]+'</span>').join('')+'</div>'
++'<div class="dts">'+C.map(c=>{const t=c[1](u);return '<span class="dc" data-l="'+c[0]+'">'+(t?'<b>'+rel(t)+'</b><em>'+D(t)+'</em>':'<b class="mu">Unknown</b>')+'</span>'}).join('')+'</div>'
++(ed?'<div class="acts"><button class="ab k'+(s==='k'?' on2':'')+'" data-a="mk" data-u="'+esc(u)+'" title="Keep" aria-label="Keep '+esc(u)+'" aria-pressed="'+(s==='k')+'">✓</button>'
++'<button class="ab x'+(s==='r'?' on2':'')+'" data-a="mr" data-u="'+esc(u)+'" title="Remove" aria-label="Remove '+esc(u)+'" aria-pressed="'+(s==='r')+'">✕</button></div>':'')
++'</div>'}
+
+/* ---------- upload modal ---------- */
+let upFiles=[];
+function upModal(){const names=Object.keys(S.P).filter(n=>n!=='example_user');
+return '<div class="mb"><h3>Upload your Instagram data</h3><p class="mu" style="margin:2px 0 0">Your files are read in this browser and never uploaded anywhere.</p>'
++'<ol class="steps">'
++'<li>In Instagram, open <b>Settings and activity</b> → <b>Accounts Centre</b>.</li>'
++'<li>Go to <b>Your information and permissions</b> → <b>Export your information</b> → <b>Create export</b>.</li>'
++'<li>Pick your profile, then <b>Export to device</b>.</li>'
++'<li>Under <b>Customize information</b>, clear every section and tick <b>Followers and following</b> only. <em>Other sections make the file far bigger and slower.</em></li>'
++'<li>Set date range to <b>All time</b> and format to <b>JSON</b>. <em>HTML works too.</em></li>'
++'<li>Wait for the email, download it, then add the files below.</li></ol>'
++'<div class="note">'+INF+'<span>Instagram can take minutes or hours to prepare an export, and menu names move around between app versions.</span></div>'
++'<div class="row2"><label class="fld"><span>Profile</span><select id="pf">'
++(names.length?'<option value="">Choose…</option>':'')+names.map(n=>'<option value="'+esc(n)+'" '+(n===S.cur?'selected':'')+'>@'+esc(n)+'</option>').join('')
++'<option value="__new" '+(names.length?'':'selected')+'>+ Add a new profile</option></select></label>'
++'<label class="fld"><span>Export date</span><input type="date" id="dt" value="'+new Date().toISOString().slice(0,10)+'"></label></div>'
++'<label class="fld" id="nw" '+(names.length?'hidden':'')+'><span>New username</span><input type="text" id="un" placeholder="yourusername" autocapitalize="off" spellcheck="false"></label>'
++'<label class="drop" id="dz"><input type="file" id="fl" multiple accept=".json,.html,.zip,.csv"><b>Choose files or drop them here</b></label>'
+
++'<p id="ms" class="mu" style="font-size:13px;margin:0"></p>'
++'<div class="mact"><button class="gh" data-a="close">Cancel</button><button class="pr" data-a="go">Import</button></div></div>'}
+
+/* ---------- settings ---------- */
+function csvText(){const p=cp(),e=ef(),l=L(e),iso=t=>t?new Date(t*1000).toISOString().slice(0,10):'',
+SN={k:'Kept',r:'Removed','':'Unchecked'},rows=[['username','relationship','you_followed','they_followed_you','status','flags','profile_url']],
+add=(u,r)=>rows.push([u,r,iso(e.fing[u]),iso(e.fers[u]),SN[st(p.meta[u]||{})],flagsOf(p,u).join(';'),url(u)]);
+l.nofb.forEach(u=>add(u,'Unfollower'));l.fb.forEach(u=>add(u,'Mutual'));l.fans.forEach(u=>add(u,'Fan'));
+return rows.map(r=>r.map(c=>/[",\n]/.test(c)?'"'+String(c).replace(/"/g,'""')+'"':c).join(',')).join('\r\n')}
+function csvSave(){const p=cp();return saveFile('unfollowers-'+p.name+'-'+(snapDate(p)||'export')+'.csv',csvText(),'text/csv;charset=utf-8')}
+function backup(){const out={app:'unfollowers',v:1,at:new Date().toISOString(),profiles:{}};
+Object.keys(S.P).forEach(k=>{if(!S.P[k].demo)out.profiles[k]=S.P[k]});return JSON.stringify(out)}
+async function saveFile(fn,data,type){
+try{const d=window.claude&&await claude.use('downloads');if(d){await d.save({filename:fn,data});return say('Saved '+fn)}}
+catch(err){if(err&&err.code==='declined')return;}
+try{const b=new Blob([data],{type:type||'application/json'}),a=document.createElement('a'),u2=URL.createObjectURL(b);
+a.href=u2;a.download=fn;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u2),1500);say('Saved '+fn)}
+catch(err){say('Couldn’t save the file')}}
+async function restore(f){try{const j=JSON.parse(await f.text());
+const ps=j&&j.profiles?j.profiles:(j&&j.name&&j.fing?{[j.name]:j}:null);
+if(!ps)return say('That file isn’t an Unfollowers backup');
+const names=Object.keys(ps);if(!names.length)return say('That backup has no profiles');
+names.forEach(k=>{const p=ps[k];if(p&&p.fing&&p.fers){p.name=k;p.fl=p.fl||emptyFl();p.log=p.log||[];p.meta=p.meta||{};S.P[k]=p}});
+S.cur=names[0];S.snap=-1;S.sel.clear();S.set=false;EC.k='';
+for(const k of names)await save(k);
+render();say('Restored '+names.length+' profile'+(names.length>1?'s':''))}
+catch(e){say('Couldn’t read that backup: '+(e.message||e))}}
+function delSnap(p,i){
+if(i===-1){if(!p.log.length)return;const X=stateAt(p,0);p.fing=X.fing;p.fers=X.fers;p.date=p.log[0].pd||p.date;p.log.shift();S.snap=-1;EC.k='';sv(p.name);return}
+if(!p.log[i])return;
+if(!p.log[i+1]){p.log.splice(i,1)}
+else{const X=stateAt(p,i+1),Y=stateAt(p,i-1),df=(a,b)=>Object.keys(b).filter(u=>!(u in a)),
+g={d:p.log[i].d,pd:p.log[i+1].pd,fa:df(X.fing,Y.fing),fr:df(Y.fing,X.fing),ga:df(X.fers,Y.fers),gr:df(Y.fers,X.fers),frT:{},grT:{}};
+g.fr.forEach(u=>g.frT[u]=X.fing[u]||0);g.gr.forEach(u=>g.grT[u]=X.fers[u]||0);
+p.log.splice(i,2,g)}
+S.snap=-1;EC.k='';sv(p.name)}
+async function delProfile(n){delete S.P[n];const left=Object.keys(S.P);
+S.cur=left.filter(k=>!S.P[k].demo)[0]||left[0];S.snap=-1;S.sel.clear();S.set=false;EC.k='';
+const ix=Object.keys(S.P).filter(k=>!S.P[k].demo);
+try{if(coll){await coll.doc('p_'+n).delete();await coll.doc('index').set({n:ix})}
+else{localStorage.removeItem('ig_'+n);localStorage.setItem('ig_idx',JSON.stringify(ix))}}catch(e){}
+say('Deleted @'+n)}
+function setModal(){const p=cp(),sn=p.log.length?snaps(p):[],demo=!!p.demo;
+if(sn.length&&!sn.some(x=>String(x[0])===String(S.snapSel)))S.snapSel=sn[0][0];
+const
+cf=k=>S.cfm===k;
+return '<div class="mb"><h3>Settings</h3>'
++'<p class="mu" style="margin:2px 0 14px">Profile @'+esc(p.name)+(demo?' · example data':'')+'</p>'
++'<div class="note">'+INF+'<span>'+(coll?'Your profiles sync with your Claude account, so they follow you to any device you open this page on.':'Nothing you upload leaves this device.'+(window.claude?' Sign in to Claude on this page to sync across devices.':' To move it to another device, download a backup and restore it there.'))+'</span></div>'
++'<div class="sset"><b>Where your data lives</b><p class="mu">'
++(coll?'Synced to your Claude account.':'Stored in this browser'+(persist==='yes'?', and the browser has agreed to keep it unless you clear site data.':persist==='no'?'. The browser may clear it if it runs low on space, or if you don’t open the page for a while. Keep a backup.':'.'))
++(function(){const kb=dataKB();return kb?' Your profiles take about '+(kb>1024?(kb/1024).toFixed(1)+' MB':kb+' KB')+'.':''})()+'</p>'
++'<div class="row2" style="gap:9px"><button class="gh" data-a="bkup" style="flex:0 0 auto">Download backup</button>'
++'<label class="gh" style="flex:0 0 auto;padding:8px 14px;border-radius:10px;cursor:pointer;font-weight:600">Restore backup<input type="file" id="rs" accept=".json" style="display:none"></label></div>'
++'<p class="mu" style="margin:10px 0 0;font-size:12px">A backup holds every profile with its history, marks and labels. Restoring replaces profiles of the same name.</p></div>'
++'<div class="sset"><b>Export a spreadsheet</b><p class="mu">Every account in this profile as a CSV, with dates and how you marked them. Opens in Excel or Sheets, and can be imported back.</p><button class="gh" data-a="csv">Download CSV</button></div>'
++(sn.length?'<div class="sset"><b>Delete a snapshot</b><p class="mu">Removes one upload. Deleting the latest rolls your data back to the one before it; deleting an older one just drops that point in history.</p>'
++'<div class="row2"><select id="sd">'+sn.map(x=>'<option value="'+x[0]+'" '+(String(S.snapSel)===String(x[0])?'selected':'')+'>'+esc(x[1])+'</option>').join('')+'</select>'
++'<button class="gh dng" data-a="dsnap" style="flex:0 0 auto">'+(cf('snap')?'Tap again to delete '+esc((sn.find(x=>String(x[0])===String(S.snapSel))||sn[0])[1]):'Delete snapshot')+'</button></div></div>'
++'<div class="sset"><b>Clear history</b><p class="mu">Deletes the changes log and every earlier snapshot. Your latest data and marks stay.</p>'
++'<button class="gh dng" data-a="dhist">'+(cf('hist')?'Tap again to clear':'Clear history')+'</button></div>':'')
++'<div class="sset"><b>Clear marks</b><p class="mu">Sets every account in this profile back to unchecked.</p>'
++'<button class="gh dng" data-a="dmarks">'+(cf('marks')?'Tap again to clear':'Clear all marks')+'</button></div>'
++(demo?'':'<div class="sset"><b>Delete profile</b><p class="mu">Removes @'+esc(p.name)+', its uploads, history and marks. This cannot be undone.</p>'
++'<button class="gh dng" data-a="dprof">'+(cf('prof')?'Tap again to delete @'+esc(p.name):'Delete profile')+'</button></div>')
++'<div class="mact"><button class="gh" data-a="close">Done</button></div></div>'}
+
+/* ---------- check popup ---------- */
+function qb(p){const k=S.cks,e=ef(),l=L(e,p),now=Date.now()/1e3,tf=u=>k.scope==='pend'?pendT(p,u):(e.fing[u]||e.fers[u]),
+sh=a=>{for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));const t=a[i];a[i]=a[j];a[j]=t}return a},
+cmp={az:(x,y)=>x<y?-1:1,za:(x,y)=>x<y?1:-1,old:(x,y)=>tf(x)-tf(y),nw:(x,y)=>tf(y)-tf(x),len:(x,y)=>x.length-y.length||(x<y?-1:1)},
+G={nofb:l.nofb,fb:l.fb,fans:l.fans,pend:l.pend},keepDel=(k.usr||[]).indexOf('del')>=0;
+return (k.scope==='all'?['nofb','fb','fans']:[k.scope]).flatMap(g=>{
+const a=(G[g]||[]).filter(u=>(keepDel||!u.startsWith('__deleted__'))&&match(u,tf(u),k,p.meta[u]||{},now,p.fl));
+return k.sort==='shuffle'?sh(a):a.sort(cmp[k.sort]||cmp.az)})}
+function ckRebuild(){S.ck={q:qb(cp()),i:0};ckRender()}
+function ckOpen(){ckRebuild()}
+function ckRender(){const c=S.ck,el=$('#ck');if(!c){el.hidden=true;el.innerHTML='';return}
+const p=cp(),e=ef(),u=c.q[c.i],k=S.cks,act=nF(k)>1||k.st[0]!=='u'||k.sort!=='shuffle',
+hd='<div class="kh"><select data-ck2="scope" aria-label="Group">'+ckScopes(p).map(x=>'<option value="'+x[0]+'" '+(k.scope===x[0]?'selected':'')+'>'+x[1]+'</option>').join('')+'</select>'
++'<button data-a="ckf" class="ic'+(k.fo?' pr':'')+'" title="Filters and sort" aria-label="Filters and sort" aria-expanded="'+k.fo+'">'+FIC+(act?'<i class="dt"></i>':'')+'</button></div>'
++(k.fo?'<div class="kfp"><div class="fg">'+FSEC.filter(x=>x.k!=='flg'||hasFl(p)).map(s=>'<div class="fs"><b>'+s.t+'</b>'
++s.o.map(o=>'<label class="cb2"><input type="checkbox" data-ck="'+s.k+'" value="'+o[0]+'" '+(k[s.k].includes(o[0])?'checked':'')+'>'+o[1]+'</label>').join('')+'</div>').join('')
++'<div class="fs"><b>Order</b><label class="cb2" style="padding-top:0"><select data-ck2="sort" style="width:100%">'
++[['shuffle','Shuffle']].concat(SORTS).map(x=>'<option value="'+x[0]+'" '+(k.sort===x[0]?'selected':'')+'>'+x[1]+'</option>').join('')+'</select></label></div>'
++'</div><div class="ft"><button class="gh" data-a="kclr">Reset</button></div></div>':'');
+el.hidden=false;
+if(u===undefined){const left=c.q.filter(x=>!st(p.meta[x]||{})).length,more=qb(p).length;
+el.innerHTML='<div class="kw">'+hd+'<div class="kc"><h3 style="margin:0 0 8px">'+(c.q.length?'All done':'Nothing to check')+'</h3>'
++'<p class="mu" style="margin:0 0 16px">'+(c.q.length?(left?left+' skipped account'+(left>1?'s are':' is')+' still unchecked.':'You reached the end of this list.'):'No accounts match these settings. Try another group or change the filters.')+'</p>'
++(more?'<button class="pr" data-a="ckagain">'+(left?'Go through skipped':'Start again')+'</button> ':'')+'<button class="gh" data-a="ckclose">Close</button>'
++(c.i>0?'<p style="margin:14px 0 0"><button class="gh" data-a="ck" data-k="back">← Back</button></p>':'')+'</div></div>';return}
+const s=st(p.meta[u]||{}),dl=u.startsWith('__deleted__'),fg=e.fing[u],fr=e.fers[u],pt=pendT(p,u),
+rel2=k.scope==='pend'?'Follow request not accepted':fg&&fr?'Follows you back':fg?'Doesn’t follow you back':'Follows you, you don’t follow back',
+kd=(a,b)=>'<div class="kd"><span>'+a+'</span><b>'+b+'</b></div>';
+el.innerHTML='<div class="kw">'+hd
++'<div class="kc" id="kc">'+(s?'<span class="tag '+s+'">'+(s==='k'?'Kept':'Removed')+'</span>':'')
++'<div class="kn">'+(dl?'Deleted account':'<a href="'+url(u)+'" target="_blank" rel="noopener noreferrer">'+esc(u)+'</a>')+'</div>'
++(flagsOf(p,u).length?'<div class="kbd">'+flagsOf(p,u).map(k=>'<span class="bdg" style="color:'+BDG[k][1]+';background:'+BDG[k][2]+'">'+BDG[k][0]+'</span>').join('')+'</div>':'')
++(dl?'<p class="mu" style="margin:0 0 14px">This account no longer exists.</p>':'')
++kd('Relationship',rel2)+(pt?kd('Requested',rel(pt)+' · '+D(pt)):'')+(fg?kd('You followed',rel(fg)+' · '+D(fg)):'')+(fr?kd('Followed you',rel(fr)+' · '+D(fr)):'')
++'</div>'
++'<div class="kp">'+(c.i+1)+' of '+c.q.length+'<div class="prg"><i style="width:'+((c.i)/c.q.length*100)+'%"></i></div></div>'
++'<div class="kb"><button class="rb" data-a="ck" data-k="back" title="Previous" aria-label="Previous account" '+(c.i?'':'disabled')+'>←</button>'
++'<button class="rb x" data-a="ck" data-k="r" title="Remove" aria-label="Remove">✕</button>'
++'<button class="rb g" data-a="ck" data-k="k" title="Keep" aria-label="Keep">✓</button>'
++'<button class="rb" data-a="ck" data-k="skip" title="Skip" aria-label="Skip">→</button></div>'
++'<button class="gh" data-a="ckclose">Close</button></div>'}
+function ckAct(k){const c=S.ck;if(!c)return;
+if(k==='back'){if(c.i>0){c.i--;ckRender()}return}
+const p=cp(),u=c.q[c.i];if(u===undefined||c.busy)return;c.busy=1;
+const kc=$('#kc');if(kc&&kc.classList)kc.classList.add({k:'fk',r:'fr',skip:'fs'}[k]);
+setTimeout(()=>{c.busy=0;if(k!=='skip'){setStatus(p,[u],k)}c.i++;ckRender();render()},200)}
+function setStatus(p,us,v){const now=Math.round(Date.now()/1000);
+us.forEach(u=>{const m=p.meta[u]=p.meta[u]||{};delete m.k;delete m.x;if(v){m.s=v;m.t=now}else{delete m.s;delete m.t}});sv(p.name)}
+
+/* ---------- events ---------- */
+let shiftOn=false,lastI=null;
+document.addEventListener('click',e=>{
+if(e.target&&e.target.matches&&e.target.matches('input[data-sel]'))shiftOn=e.shiftKey;
+const b=e.target.closest?e.target.closest('button[data-a],a[data-a]'):null;if(!b)return;
+e.preventDefault();const a=b.dataset.a,p=cp();
+if(a==='tab'){S.tab=b.dataset.t;S.n=200;S.sel.clear();lastI=null;if(S.tab!=='fb'&&/^y/.test(S.sort))S.sort='az';
+if(S.tab==='nofb'||S.tab==='fb'||S.tab==='fans'||S.tab==='pend')S.cks.scope=S.tab}
+else if(a==='up'){S.up=true;S.set=false;upFiles=[]}
+else if(a==='set'){S.set=!S.set;S.up=false;S.cfm='';if(S.set)storageInfo().then(render)}
+else if(a==='close'){S.up=false;S.set=false;S.cfm=''}
+else if(a==='csv')return csvSave();
+else if(a==='bkup')return saveFile('unfollowers-backup-'+new Date().toISOString().slice(0,10)+'.json',backup());
+else if(a==='dsnap'){const sel=$('#sd');if(sel)S.snapSel=+sel.value;
+if(S.cfm!=='snap'){S.cfm='snap'}else{S.cfm='';delSnap(p,S.snapSel);S.snapSel=-1}}
+else if(a==='dhist'){if(S.cfm!=='hist'){S.cfm='hist'}else{S.cfm='';p.log=[];S.snap=-1;EC.k='';sv(p.name);say('History cleared')}}
+else if(a==='dmarks'){if(S.cfm!=='marks'){S.cfm='marks'}else{S.cfm='';const old=p.meta;p.meta={};sv(p.name);say('All marks cleared',()=>{p.meta=old;sv(p.name);render()})}}
+else if(a==='dprof'){if(S.cfm!=='prof'){S.cfm='prof'}else{S.cfm='';return delProfile(p.name).then(render)}}
+else if(a==='undo'){const f=undoFn;undoFn=null;clearTimeout(mt);$('#msg').hidden=true;if(f)f()}
+else if(a==='go')return doImport();
+else if(a==='more')S.n+=200;
+else if(a==='lf')S.fo=!S.fo;
+else if(a==='fclr'){S.f=FRESH();S.n=200}
+else if(a==='unf'){const k=b.dataset.k;S.f[k]=S.f[k].filter(x=>x!==b.dataset.v);S.n=200}
+else if(a==='kclr'){S.cks=Object.assign(FRESH(),{scope:S.cks.scope,sort:'shuffle',st:['u'],fo:S.cks.fo});return ckRebuild()}
+else if(a==='latest'){S.snap=-1;S.sel.clear()}
+else if(a==='hall'){const vis=p.log.slice(S.snap+1),all=vis.every(g=>S.hid[ck(g)]);vis.forEach(g=>S.hid[ck(g)]=!all)}
+else if(a==='mk'||a==='mr'){const u=b.dataset.u,cur=st(p.meta[u]||{}),v=a==='mk'?'k':'r';setStatus(p,[u],cur===v?'':v)}
+else if(a==='bk'||a==='br'||a==='bu'){const vis=new Set(view()),us=[...S.sel].filter(u=>vis.has(u)),was=us.map(u=>[u,st(p.meta[u]||{})]);
+if(!us.length){S.sel.clear();render();return}
+setStatus(p,us,a==='bk'?'k':a==='br'?'r':'');S.sel.clear();
+say(us.length+' account'+(us.length>1?'s':'')+' '+(a==='bk'?'kept':a==='br'?'removed':'cleared'),()=>{was.forEach(x=>setStatus(p,[x[0]],x[1]));render()})}
+else if(a==='bn')S.sel.clear();
+else if(a==='check')return ckOpen();
+else if(a==='ck')return ckAct(b.dataset.k);
+else if(a==='ckf'){S.cks.fo=!S.cks.fo;return ckRender()}
+else if(a==='ckagain')return ckRebuild();
+else if(a==='ckclose'){S.ck=null;ckRender();return render()}
+render()});
+
+document.addEventListener('change',e=>{const t=e.target,p=cp(),d=t.dataset||{};
+if(d.f!==undefined){const k=d.f,v=t.value;S.f[k]=t.checked?S.f[k].concat([v]):S.f[k].filter(x=>x!==v);S.n=200}
+else if(d.ck!==undefined){const k=d.ck,v=t.value;S.cks[k]=t.checked?S.cks[k].concat([v]):S.cks[k].filter(x=>x!==v);return ckRebuild()}
+else if(d.ck2!==undefined){S.cks[d.ck2]=t.value;if(d.ck2==='scope'){S.tab=t.value;S.sel.clear()}return ckRebuild()}
+else if(d.ins!==undefined)S.ins[d.ins]=t.value;
+else if(d.insd!==undefined)S.ins[d.insd+'d']=t.value;
+else if(d.sort!==undefined)S.sort=t.value;
+else if(d.csort!==undefined)S.csort=t.value;
+else if(d.p!==undefined){S.cur=t.value;S.snap=-1;S.tab='nofb';S.sel.clear();EC.k=''}
+else if(d.sn!==undefined){S.snap=+t.value;S.sel.clear();EC.k=''}
+else if(d.all!==undefined){const v=view();if(t.checked)v.forEach(u=>S.sel.add(u));else v.forEach(u=>S.sel.delete(u))}
+else if(d.sel!==undefined){const v=view(),i=+d.i;
+if(shiftOn&&lastI!==null){const a=Math.min(lastI,i),b2=Math.max(lastI,i);for(let j=a;j<=b2;j++)if(v[j])t.checked?S.sel.add(v[j]):S.sel.delete(v[j])}
+else t.checked?S.sel.add(d.sel):S.sel.delete(d.sel);
+lastI=i;shiftOn=false}
+else if(t.id==='rs'){const f=(t.files||[])[0];if(f)restore(f);return}
+else if(t.id==='sd'){S.snapSel=+t.value;S.cfm='';return render()}
+else if(t.id==='pf'){const n=$('#nw');if(n)n.hidden=t.value!=='__new';if(t.value==='__new'&&$('#un'))$('#un').focus();return}
+else if(t.id==='fl'){upFiles=[...t.files];const z=$('#dz');if(z)z.querySelector('b').textContent=upFiles.length?upFiles.map(f=>f.name).join(', '):'Choose files or drop them here';return}
+else return;
+render()});
+
+document.addEventListener('toggle',e=>{const d=e.target;if(d.tagName==='DETAILS'&&d.dataset.k!==undefined)S.hid[d.dataset.k]=!d.open},true);
+document.addEventListener('keydown',e=>{
+if(S.ck&&!(e.target.matches&&e.target.matches('input,select,textarea'))){
+const k={ArrowRight:'skip',ArrowLeft:'back',k:'k',K:'k',x:'r',X:'r'}[e.key];
+if(k){e.preventDefault();return ckAct(k)}
+if(e.key==='Escape'){S.ck=null;ckRender();return render()}return}
+if((S.up||S.set)&&e.key==='Escape'){S.up=false;S.set=false;S.cfm='';render()}
+if(e.key==='/'&&!S.up&&!S.ck&&!(e.target.matches&&e.target.matches('input,select,textarea'))){e.preventDefault();const q=$('#q');if(q&&!q.hidden)q.focus()}});
+document.addEventListener('dragover',e=>{if(!S.up)return;e.preventDefault();const z=$('#dz');if(z)z.classList.add('ov')});
+document.addEventListener('dragleave',e=>{const z=$('#dz');if(z&&e.target===z)z.classList.remove('ov')});
+document.addEventListener('drop',e=>{if(!S.up)return;e.preventDefault();const z=$('#dz');if(z)z.classList.remove('ov');
+upFiles=[...(e.dataTransfer?e.dataTransfer.files:[])];if(z&&upFiles.length)z.querySelector('b').textContent=upFiles.map(f=>f.name).join(', ')});
+$('#q').addEventListener('input',()=>{S.n=200;render()});
+$('#modal').addEventListener('click',e=>{if(e.target.id==='modal'){S.up=false;S.set=false;S.cfm='';render()}});
+
+render();
+(async()=>{await storageInfo();try{if(window.claude){const r=await Promise.all([claude.use('user'),claude.use('db')]);if(r[0]&&r[1])coll=r[1].collection('data/users/'+await r[0].id())}}catch(e){}load()})();
+</script></body></html>
