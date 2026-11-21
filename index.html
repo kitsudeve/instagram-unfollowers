@@ -282,47 +282,76 @@ function say(t,undo){const m=$('#msg');undoFn=undo||null;
 m.innerHTML='<span></span>'+(undo?'<button class="gh" data-a="undo">Undo</button>':'');
 m.firstChild.textContent=t;m.hidden=!t;clearTimeout(mt);
 if(t)mt=setTimeout(()=>{m.hidden=true;undoFn=null},undo?7000:4000)}
-let pend=null,ready=false,saveErr='';const dirty={};
+let ready=false,saveErr='',idxDel={};const dirty={},timers={};
 const lists=p=>{const o={};for(const k in p)if(k!=='meta')o[k]=p[k];return o};
-const sv=(n,full)=>{pend=n;dirty[n]=dirty[n]||full?2:1;clearTimeout(sv.t);sv.t=setTimeout(()=>{sv.t=null;save(n,dirty[n]===2)},400)};
-const flush=()=>{if(!sv.t)return;clearTimeout(sv.t);sv.t=null;const p=S.P[pend];
-if(p&&!p.demo){try{localStorage.setItem('igm_'+pend,JSON.stringify(p.meta||{}));
-localStorage.setItem('ig_'+pend,JSON.stringify(lists(p)));
-localStorage.setItem('ig_idx',JSON.stringify(Object.keys(S.P).filter(k=>!S.P[k].demo)))}catch(e){}}
-save(pend,dirty[pend]===2)};
+const mine=()=>Object.keys(S.P).filter(k=>!S.P[k].demo);
+/* Each profile has its own pending save, so marking in one profile and then
+   another within the 400 ms wait can no longer cancel the first one. A "full"
+   save also rewrites the account lists; `sa` stamps when those lists changed,
+   so on load the newer of the browser copy and the database copy wins. */
+const touch=n=>{const p=S.P[n];if(p&&!p.demo)p.sa=Date.now()};
+const sv=(n,full)=>{if(full)touch(n);dirty[n]=(dirty[n]===2||full)?2:1;clearTimeout(timers[n]);
+timers[n]=setTimeout(()=>{delete timers[n];save(n,dirty[n]===2)},400)};
+function writeLocal(n,full){const p=S.P[n];if(!p||p.demo)return;
+try{localStorage.setItem('igm_'+n,JSON.stringify(p.meta||{}));
+if(full){localStorage.setItem('ig_'+n,JSON.stringify(lists(p)));localStorage.setItem('ig_idx',JSON.stringify(mine()))}}catch(e){}}
+const flush=()=>{Object.keys(timers).forEach(n=>{clearTimeout(timers[n]);delete timers[n];writeLocal(n,dirty[n]===2);save(n,dirty[n]===2)})};
 addEventListener('pagehide',flush);
 addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')flush()});
+/* The database index lists profile names, plus `del`: when each was deleted,
+   so a copy left in another browser can't bring a deleted profile back. */
+async function writeIndex(){const d=await coll.doc('index').get(),o=d.exists?d.data()||{}:{},
+del=Object.assign({},o.del||{},idxDel);
+mine().forEach(k=>{if(del[k]&&(S.P[k].sa||0)>del[k])delete del[k]});
+const names=[...new Set((o.n||[]).concat(mine()))].filter(k=>S.P[k]&&!S.P[k].demo?!(del[k]&&del[k]>=(S.P[k].sa||0)):!del[k]);
+idxDel=del;await coll.doc('index').set({n:names,del})}
 async function save(n,full){const p=S.P[n];if(!p||p.demo){delete dirty[n];return}
 if(!ready){dirty[n]=full?2:(dirty[n]||1);return}
-const ix=Object.keys(S.P).filter(k=>!S.P[k].demo),mj=JSON.stringify(p.meta||{});
-try{localStorage.setItem('igm_'+n,mj);
-if(full){localStorage.setItem('ig_'+n,JSON.stringify(lists(p)));localStorage.setItem('ig_idx',JSON.stringify(ix))}}catch(e){}
+const was=dirty[n];writeLocal(n,full);
 try{
-if(coll){await coll.doc('m_'+n).set({j:mj});
-if(full){await coll.doc('p_'+n).set({j:JSON.stringify(lists(p))});await coll.doc('index').set({n:ix})}}
-delete dirty[n];if(saveErr){saveErr='';render()}}
-catch(e){saveErr=(e&&e.message)||String(e);render();say('Couldn’t save: '+saveErr)}}
+if(coll){
+/* Merge with the database copy before writing, so a device that loaded
+   earlier can't overwrite marks made since on another device. */
+const q=await coll.doc('m_'+n).get(),dm=q.exists?parseMeta(q.data().j):null;
+if(dm){const mg=mergeMeta(dm,p.meta),cur=p.meta||{};
+if(Object.keys(mg).some(u=>mg[u]!==cur[u])){p.meta=mg;writeLocal(n,false);EC.k='';render()}}
+await coll.doc('m_'+n).set({j:JSON.stringify(p.meta||{})});
+if(full){await coll.doc('p_'+n).set({j:JSON.stringify(lists(p))});await writeIndex()}}
+if(dirty[n]===was&&!timers[n])delete dirty[n];if(saveErr){saveErr='';render()}}
+catch(e){saveErr=(e&&e.message)||String(e);render()}}
 const parseMeta=j=>{try{const o=JSON.parse(j);return o&&typeof o==='object'?o:null}catch(e){return null}};
+const parseJ=j=>{try{return j?JSON.parse(j):null}catch(e){return null}};
 const mergeMeta=(a,b)=>{const out=Object.assign({},a||{});
 Object.keys(b||{}).forEach(u=>{const x=out[u],y=b[u];if(!x||(y.t||0)>=(x.t||0))out[u]=y});return out};
-async function readOne(n){let base=null,dbm=null;
-if(coll){const d=await coll.doc('p_'+n).get();if(d.exists)base=JSON.parse(d.data().j);
+/* Returns the profile plus what still needs writing to the database:
+   2 = the browser's lists are newer, 1 = the browser has newer marks. */
+async function readOne(n,delAt){let db=null,dbm=null,push=0;
+if(coll){const d=await coll.doc('p_'+n).get();if(d.exists)db=parseJ(d.data().j);
 const q=await coll.doc('m_'+n).get();if(q.exists)dbm=parseMeta(q.data().j)}
-if(!base){const j=localStorage.getItem('ig_'+n);if(j)base=JSON.parse(j)}
+const loc=parseJ(localStorage.getItem('ig_'+n));
+let base=db;
+if(loc&&(!db||(loc.sa||0)>(db.sa||0))){
+if(!db&&delAt&&(loc.sa||0)<=delAt)return null;
+base=loc;if(coll)push=2}
 if(!base)return null;
-let meta=base.meta||{};
-if(dbm)meta=dbm;
+let meta=mergeMeta(base.meta||{},dbm||{});
 const lm=parseMeta(localStorage.getItem('igm_'+n));
-if(lm)meta=mergeMeta(meta,lm);
-base.meta=meta;return base}
-async function load(){let ns=[];
-try{if(coll){const i=await coll.doc('index').get();ns=i.exists?i.data().n||[]:[]}
-else ns=JSON.parse(localStorage.getItem('ig_idx')||'[]');
-for(const n of ns){if(dirty[n])continue;const p=await readOne(n);if(p){p.name=n;S.P[n]=p}}
-if(ns.length&&S.P[ns[0]]&&!Object.keys(dirty).length)S.cur=ns[0]}
+if(lm){meta=mergeMeta(meta,lm);if(coll&&!push&&JSON.stringify(meta)!==JSON.stringify(dbm||{}))push=1}
+base.meta=meta;return{p:base,push}}
+async function load(){let ns=[];const push={};
+try{const loc=parseJ(localStorage.getItem('ig_idx'))||[];
+if(coll){const i=await coll.doc('index').get(),o=i.exists?i.data()||{}:{};idxDel=o.del||{};
+ns=[...new Set((o.n||[]).concat(loc))]}
+else ns=loc;
+const first=ns.find(n=>!dirty[n]);
+for(const n of ns){if(dirty[n])continue;const r=await readOne(n,idxDel[n]);
+if(r){r.p.name=n;S.P[n]=r.p;if(r.push)push[n]=r.push}
+else if(coll&&idxDel[n]){try{localStorage.removeItem('ig_'+n);localStorage.removeItem('igm_'+n)}catch(e){}}}
+if(first&&S.P[first]&&!Object.keys(dirty).length)S.cur=first}
 catch(e){saveErr=(e&&e.message)||String(e)}
-ready=true;
+ready=true;EC.k='';
 for(const n of Object.keys(dirty))await save(n,true);
+for(const n of Object.keys(push))if(!dirty[n])await save(n,push[n]===2);
 render()}
 
 /* ---------- parsing ---------- */
@@ -400,16 +429,16 @@ const nF2=got.fing||P.fing,nE2=got.fers||P.fers,rel=(f,e2,u)=>(u in f?1:0)+(u in
 Object.keys(P.meta).forEach(u=>{if(!st(P.meta[u]))return;
 if(rel(P.fing,P.fers,u)!==rel(nF2,nE2,ren[u]||u)){P.meta[u].s='';P.meta[u].t=Math.round(Date.now()/1000);delete P.meta[u].k;delete P.meta[u].x;reset.push(u)}});
 Object.keys(ren).forEach(o2=>{const nn=ren[o2];
-if(P.meta[o2]){P.meta[nn]=P.meta[o2];delete P.meta[o2]}
+if(P.meta[o2]){P.meta[nn]=P.meta[o2];P.meta[o2]={s:'',t:Math.round(Date.now()/1000)}}
 FKEYS.forEach(k=>{const b=(P.fl||{})[k];if(b&&b[o2]!==undefined){b[nn]=b[o2];delete b[o2]}})});
 g.rs=reset;
-if(g.fa.length+g.fr.length+g.ga.length+g.gr.length)P.log.unshift(g)}
+if(g.fa.length+g.fr.length+g.ga.length+g.gr.length+(g.rn||[]).length)P.log.unshift(g)}
 if(got.fing)P.fing=got.fing;if(got.fers)P.fers=got.fers;P.date=d;
 P.fl=P.fl||emptyFl();FKEYS.forEach(k=>{if(got[k])P.fl[k]=got[k]});
 if(got.csv){P.fl=got.csv.fl;Object.keys(got.csv.meta).forEach(u=>P.meta[u]=got.csv.meta[u])}
 const nFl=FKEYS.reduce((a,k)=>a+Object.keys(P.fl[k]||{}).length,0);
 S.P[nm]=P;S.cur=nm;S.snap=-1;S.tab='nofb';S.sel.clear();S.up=false;upFiles=[];EC.k='';
-$('#modal').innerHTML='';render();save(nm,true);
+$('#modal').innerHTML='';touch(nm);render();save(nm,true);
 const nFo=Object.keys(P.fers).length;
 say('Imported '+Object.keys(P.fing).length+' following and '+nFo+(nFo===1?' follower':' followers')+(nFl?', plus '+nFl+' from your other lists':'')
 +(reset.length?' · '+reset.length+' mark'+(reset.length>1?'s':'')+' cleared because the relationship changed':'')
@@ -605,7 +634,7 @@ if(!ps)return say('That file isn’t an Unfollowers backup');
 const names=Object.keys(ps);if(!names.length)return say('That backup has no profiles');
 names.forEach(k=>{const p=ps[k];if(p&&p.fing&&p.fers){p.name=k;p.fl=p.fl||emptyFl();p.log=p.log||[];p.meta=p.meta||{};S.P[k]=p}});
 S.cur=names[0];S.snap=-1;S.sel.clear();S.set=false;EC.k='';
-for(const k of names)await save(k,true);
+for(const k of names){touch(k);await save(k,true)}
 render();say('Restored '+names.length+' profile'+(names.length>1?'s':''))}
 catch(e){say('Couldn’t read that backup: '+(e.message||e))}}
 function delSnap(p,i){
@@ -620,9 +649,10 @@ S.snap=-1;EC.k='';sv(p.name,true)}
 async function delProfile(n){delete S.P[n];const left=Object.keys(S.P);
 S.cur=left.filter(k=>!S.P[k].demo)[0]||left[0];S.snap=-1;S.sel.clear();S.set=false;EC.k='';
 const ix=Object.keys(S.P).filter(k=>!S.P[k].demo);
-try{if(coll){await coll.doc('p_'+n).delete();await coll.doc('m_'+n).delete();await coll.doc('index').set({n:ix})}
-else{localStorage.removeItem('ig_'+n);localStorage.removeItem('igm_'+n);localStorage.setItem('ig_idx',JSON.stringify(ix))}}catch(e){}
-say('Deleted @'+n)}
+clearTimeout(timers[n]);delete timers[n];delete dirty[n];idxDel[n]=Date.now();
+try{localStorage.removeItem('ig_'+n);localStorage.removeItem('igm_'+n);localStorage.setItem('ig_idx',JSON.stringify(ix))}catch(e){}
+try{if(coll){await coll.doc('p_'+n).delete();await coll.doc('m_'+n).delete();await writeIndex()}say('Deleted @'+n)}
+catch(e){saveErr=(e&&e.message)||String(e);say('Deleted @'+n+' here, but couldn’t remove it from your Claude account: '+saveErr)}}
 function setModal(){const p=cp(),sn=p.log.length?snaps(p):[],demo=!!p.demo;
 if(sn.length&&!sn.some(x=>String(x[0])===String(S.snapSel)))S.snapSel=sn[0][0];
 const
@@ -747,7 +777,8 @@ else if(a==='bkup')return saveFile('unfollowers-backup-'+new Date().toISOString(
 else if(a==='dsnap'){const sel=$('#sd');if(sel)S.snapSel=+sel.value;
 if(S.cfm!=='snap'){S.cfm='snap'}else{S.cfm='';delSnap(p,S.snapSel);S.snapSel=-1}}
 else if(a==='dhist'){if(S.cfm!=='hist'){S.cfm='hist'}else{S.cfm='';p.log=[];S.snap=-1;EC.k='';sv(p.name,true);say('History cleared')}}
-else if(a==='dmarks'){if(S.cfm!=='marks'){S.cfm='marks'}else{S.cfm='';const old=p.meta;p.meta={};sv(p.name);say('All marks cleared',()=>{p.meta=old;sv(p.name);render()})}}
+else if(a==='dmarks'){if(S.cfm!=='marks'){S.cfm='marks'}else{S.cfm='';const old=Object.keys(p.meta).filter(u=>st(p.meta[u])).map(u=>[u,st(p.meta[u])]);
+setStatus(p,old.map(x=>x[0]),'');say('All marks cleared',()=>{['k','r'].forEach(v=>setStatus(p,old.filter(x=>x[1]===v).map(x=>x[0]),v));render()})}}
 else if(a==='dprof'){if(S.cfm!=='prof'){S.cfm='prof'}else{S.cfm='';return delProfile(p.name).then(render)}}
 else if(a==='undo'){const f=undoFn;undoFn=null;clearTimeout(mt);$('#msg').hidden=true;if(f)f()}
 else if(a==='go')return doImport();
