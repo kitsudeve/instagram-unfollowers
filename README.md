@@ -1,4 +1,4 @@
-# Instagram Unfollowers
+# Unfollower Checker
 
 A single-page tool for working through your Instagram data export: who doesn't
 follow you back, who follows you that you don't follow, what changed between
@@ -23,6 +23,15 @@ already has is refused, so it can't scramble the changes log.
 The other files in that folder are optional and add labels to accounts:
 `close_friends`, `pending_follow_requests`, `recently_unfollowed_profiles`,
 `profiles_you've_favorited`, `blocked_profiles`, `recent_follow_requests`.
+
+## Web address
+
+The app lives at https://unfollower-checker-kitsudeve.vercel.app. The old
+address (instagram-unfollowers-iota.vercel.app) still serves it, but browser
+storage belongs to one address, so there it offers to move saved data across:
+it opens the new address, which asks before merging the data in like a
+restore. Nothing is deleted from the old address. Visitors there with nothing
+saved, or whose data has moved, are sent to the new address.
 
 ## Where data lives
 
