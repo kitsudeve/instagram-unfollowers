@@ -1,0 +1,7 @@
+{
+  "name": "instagram-unfollowers-tests",
+  "private": true,
+  "description": "Browser tests for index.html",
+  "scripts": { "test": "node run.js" },
+  "devDependencies": { "playwright": "^1.40.0" }
+}

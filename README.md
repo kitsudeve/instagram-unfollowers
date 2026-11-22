@@ -34,3 +34,16 @@ Open it in a browser, or serve the folder with any static server.
 
 JSZip (for reading the export zip) loads from a CDN at runtime; everything
 else is inline.
+
+## Tests
+
+Browser tests live in `tests/` and drive the real page in headless Chromium
+with Playwright. The saving tests use a fake Claude database shared between
+several "devices" (separate browser contexts), so two-device and failed-sync
+cases can be checked without a Claude account.
+
+    cd tests
+    npm install
+    npm test            # or: node run.js "bug 2" to run matching tests only
+
+Each data-loss fix has its own test in `tests/saving.test.js`.
