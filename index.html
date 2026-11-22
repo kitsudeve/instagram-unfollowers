@@ -180,7 +180,7 @@ input[type=checkbox]:checked::after{content:"";position:absolute;left:5px;top:1.
 </style></head><body><div class="w">
 <div id="hd"></div><div id="st"></div><div id="hb"></div><button class="pr big" data-a="check" id="ckb"></button><div id="tb"></div>
 <div id="bar"><input type="text" id="q" placeholder="Search usernames" autocomplete="off" spellcheck="false"></div>
-<div id="list"></div></div><div id="msg" hidden></div><div id="modal" hidden></div><div id="ck" hidden></div>
+<div id="list"></div></div><div id="msg" hidden></div><input type="file" id="rs" accept=".json" hidden><!-- outside the modal, so a re-render while the file picker is open can't drop the chosen file --><div id="modal" hidden></div><div id="ck" hidden></div>
 <script>
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -283,6 +283,10 @@ m.innerHTML='<span></span>'+(undo?'<button class="gh" data-a="undo">Undo</button
 m.firstChild.textContent=t;m.hidden=!t;clearTimeout(mt);
 if(t)mt=setTimeout(()=>{m.hidden=true;undoFn=null},undo?7000:4000)}
 let ready=false,saveErr='',idxDel={};const dirty={},timers={};
+const lsNum=k=>{try{return +localStorage.getItem(k)||0}catch(e){return 0}};
+const lastBk=()=>lsNum('ig_bk');
+const needBk=()=>!coll&&ready&&persist!=='yes'&&persist!=='checking'&&mine().length>0&&!saveErr
+&&Date.now()-Math.max(lastBk(),lsNum('ig_bklater'))>14*864e5;
 const lists=p=>{const o={};for(const k in p)if(k!=='meta')o[k]=p[k];return o};
 const mine=()=>Object.keys(S.P).filter(k=>!S.P[k].demo);
 /* Each profile has its own pending save, so marking in one profile and then
@@ -292,11 +296,17 @@ const mine=()=>Object.keys(S.P).filter(k=>!S.P[k].demo);
 const touch=n=>{const p=S.P[n];if(p&&!p.demo)p.sa=Date.now()};
 const sv=(n,full)=>{if(full)touch(n);dirty[n]=(dirty[n]===2||full)?2:1;clearTimeout(timers[n]);
 timers[n]=setTimeout(()=>{delete timers[n];save(n,dirty[n]===2)},400)};
-function writeLocal(n,full){const p=S.P[n];if(!p||p.demo)return;
+/* Returns false when the browser refused to store the data (storage full,
+   private browsing, site data blocked). Without a Claude account the browser
+   is the only copy, so save() turns that into a visible error. */
+function writeLocal(n,full){const p=S.P[n];if(!p||p.demo)return true;
 try{localStorage.setItem('igm_'+n,JSON.stringify(p.meta||{}));
-if(full){localStorage.setItem('ig_'+n,JSON.stringify(lists(p)));localStorage.setItem('ig_idx',JSON.stringify(mine()))}}catch(e){}}
+if(full){localStorage.setItem('ig_'+n,JSON.stringify(lists(p)));localStorage.setItem('ig_idx',JSON.stringify(mine()))}return true}catch(e){return false}}
+const LOCAL_FAIL='this browser wouldn’t store it. Its storage may be full, or it may be in private browsing';
 const flush=()=>{Object.keys(timers).forEach(n=>{clearTimeout(timers[n]);delete timers[n];writeLocal(n,dirty[n]===2);save(n,dirty[n]===2)})};
 addEventListener('pagehide',flush);
+/* Ask before leaving while a change is known not to be saved. */
+addEventListener('beforeunload',e=>{if(saveErr){e.preventDefault();e.returnValue=''}});
 addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')flush()});
 /* The database index lists profile names, plus `del`: when each was deleted,
    so a copy left in another browser can't bring a deleted profile back. */
@@ -307,8 +317,9 @@ const names=[...new Set((o.n||[]).concat(mine()))].filter(k=>S.P[k]&&!S.P[k].dem
 idxDel=del;await coll.doc('index').set({n:names,del})}
 async function save(n,full){const p=S.P[n];if(!p||p.demo){delete dirty[n];return}
 if(!ready){dirty[n]=full?2:(dirty[n]||1);return}
-const was=dirty[n];writeLocal(n,full);
+const was=dirty[n];
 try{
+if(!writeLocal(n,full)&&!coll)throw new Error(LOCAL_FAIL);
 if(coll){
 /* Merge with the database copy before writing, so a device that loaded
    earlier can't overwrite marks made since on another device. */
@@ -396,9 +407,9 @@ if(!nm||nm==='example_user'){ms.innerHTML='<span class="err">'+(isNew?'Enter the
 if(!fs.length){ms.innerHTML='<span class="err">Choose your export file first.</span>';return}
 if(fs.some(f=>/\.zip$/i.test(f.name))&&typeof JSZip==='undefined'){ms.innerHTML='<span class="err">Zip files need a library that didn’t load. Reload the page, or unzip it and add followers_1.json and following.json instead.</span>';return}
 ms.textContent='Reading files…';
-const got={};try{for(const f of fs){const items=[];
+const got={};let zipMs=0;try{for(const f of fs){const items=[];
 if(/\.zip$/i.test(f.name)){const z=await JSZip.loadAsync(f);
-for(const e of Object.values(z.files)){const b=e.name.split('/').pop();
+for(const e of Object.values(z.files)){const b=e.name.split('/').pop();if(!e.dir&&e.date&&+e.date>zipMs)zipMs=+e.date;
 if(!e.dir&&!/^[._]/.test(b)&&(/^(followers_?\d*|following)\.(json|html)$/i.test(b)||XF.some(x=>b.toLowerCase().indexOf(x[0])>=0)))items.push([e.name,await e.async('string')])}}
 else items.push([f.name,await f.text()]);
 items.forEach(([n,t])=>{const r=parse(n,t);if(!r)return;
@@ -406,7 +417,12 @@ if(r.k==='csv')got.csv=r.m;else if(Object.keys(r.m).length)got[r.k]=Object.assig
 catch(e){ms.innerHTML='<span class="err">Couldn’t read those files: '+esc(e.message||'')+'</span>';return}
 if(got.csv){got.fing=got.fing||got.csv.fing;got.fers=got.fers||got.csv.fers}
 if(!got.fing&&!got.fers){ms.innerHTML='<span class="err">No account lists found in those files. Upload followers and following from your Instagram export, or a CSV you exported here.</span>';return}
-const old=S.P[nm],P=old||{name:nm,fing:{},fers:{},meta:{},log:[]},d=$('#dt').value||new Date().toISOString().slice(0,10),
+let g0=guessDate(fs);if(g0.how!=='name'&&zipMs)g0={d:isoDay(zipMs),how:'zip'};
+const newest=Math.max(0,...Object.values(got.fing||{}),...Object.values(got.fers||{})),today=isoDay(Date.now());
+if(!g0.d||(newest&&g0.d<isoDay(newest*1000)))g0={d:newest?isoDay(newest*1000):today,how:newest?'data':'saved'};
+if(g0.d>today)g0.d=today;
+if(S.P[nm]&&!S.P[nm].demo&&S.P[nm].date&&g0.d<S.P[nm].date){ms.innerHTML='<span class="err">This export is from '+esc(D2(g0.d))+' ('+HOW[g0.how]+'), but @'+esc(nm)+' already has a newer one from '+esc(D2(S.P[nm].date))+'. Nothing was changed. Upload an export made after '+esc(D2(S.P[nm].date))+'.</span>';return}
+const old=S.P[nm],P=old||{name:nm,fing:{},fers:{},meta:{},log:[]},d=g0.d,
 df=(a,b)=>Object.keys(a).filter(u=>!(u in b)),ts=(o,k)=>{const r={};k.forEach(u=>r[u]=o[u]||0);return r};
 let reset=[],ren={};
 const pairRenames=(oldM,newM,gone,came)=>{const co={},cn={},bo={},bn={},out={};
@@ -440,7 +456,7 @@ const nFl=FKEYS.reduce((a,k)=>a+Object.keys(P.fl[k]||{}).length,0);
 S.P[nm]=P;S.cur=nm;S.snap=-1;S.tab='nofb';S.sel.clear();S.up=false;upFiles=[];EC.k='';
 $('#modal').innerHTML='';touch(nm);render();save(nm,true);
 const nFo=Object.keys(P.fers).length;
-say('Imported '+Object.keys(P.fing).length+' following and '+nFo+(nFo===1?' follower':' followers')+(nFl?', plus '+nFl+' from your other lists':'')
+say('Imported the '+D2(d)+' export: '+Object.keys(P.fing).length+' following and '+nFo+(nFo===1?' follower':' followers')+(nFl?', plus '+nFl+' from your other lists':'')
 +(reset.length?' · '+reset.length+' mark'+(reset.length>1?'s':'')+' cleared because the relationship changed':'')
 +(Object.keys(ren).length?' · '+Object.keys(ren).length+' username change'+(Object.keys(ren).length>1?'s':'')+' followed through':''))}
 
@@ -536,7 +552,7 @@ $('#hd').innerHTML='<span class="logo">Unfollowers</span>'
 $('#st').innerHTML=[[F,'Following'],[R,'Followers']].map((x,i)=>{const d=hasPv?x[0]-(i?Object.keys(pv.fers).length:Object.keys(pv.fing).length):0;
 return '<div class="cd"><b>'+x[0]+'</b><span class="mu">'+x[1]+'</span>'+(hasPv?'<i class="'+(d>0?'up':d<0?'dn':'fl')+'">'+(d>0?'▲ +'+d:d<0?'▼ '+d:'– 0')+'</i>':'')+'</div>'}).join('');
 
-$('#hb').innerHTML=(saveErr?'<div class="hist" style="background:#ff4d4f14;border-color:#ff4d4f44;color:#ffb3b4"><span>Your last change couldn’t be saved: '+esc(saveErr)+'. Download a backup from Settings so you don’t lose it.</span><button data-a="set" style="background:#ff4d4f22;color:#ffb3b4">Settings</button></div>':'')+(ed?'':'<div class="hist"><span>Viewing your data as it was on '+D2(snapDate(p))+'. Checking and uploading are off while you look back.</span><button data-a="latest">Back to latest</button></div>');
+$('#hb').innerHTML=(needBk()?'<div class="hist" id="bkr" style="flex-wrap:wrap"><span style="flex:1 1 220px">Your data is only saved in this browser, which can clear it (Safari does after 7 days without a visit). '+(lastBk()?'Your last backup was '+rel(lastBk()/1000).toLowerCase()+'.':'You haven’t downloaded a backup yet.')+'</span><button data-a="bkup">Download backup</button><button data-a="bklater" class="gh" style="background:none">Later</button></div>':'')+(saveErr?'<div class="hist" style="background:#ff4d4f14;border-color:#ff4d4f44;color:#ffb3b4"><span>Your last change couldn’t be saved: '+esc(saveErr)+'. Download a backup from Settings so you don’t lose it.</span><button data-a="set" style="background:#ff4d4f22;color:#ffb3b4">Settings</button></div>':'')+(ed?'':'<div class="hist"><span>Viewing your data as it was on '+D2(snapDate(p))+'. Checking and uploading are off while you look back.</span><button data-a="latest">Back to latest</button></div>');
 
 if(S.cks.scope==='pend'&&!l.pend.length)S.cks.scope='nofb';
 const scope=(CKS.find(x=>x[0]===S.cks.scope)||CKS[0])[1],unc=(l[S.cks.scope]||[]).filter(u=>!st(p.meta[u]||{})&&!u.startsWith('__deleted__')).length;
@@ -572,8 +588,9 @@ h=(S.tab==='pend'?'<p class="mu" style="margin:14px 0 0;font-size:13px">Follow r
 $('#list').className=(S.tab!==lastTab?'fade':'');lastTab=S.tab;
 $('#list').innerHTML=h;
 if(fid){const n2=document.querySelector('[data-fid="'+fid+'"]');if(n2&&n2.focus){n2.focus();if(ss!=null&&n2.setSelectionRange)try{n2.setSelectionRange(ss,ss)}catch(e){}}}
-const mk=S.up?'up':S.set?'set':S.info?'info':null;
-if(mk==='up'){if(mKind!=='up')$('#modal').innerHTML=upModal()}
+const mk=S.rst?'rst':S.up?'up':S.set?'set':S.info?'info':null;
+if(mk==='rst')$('#modal').innerHTML=rstModal();
+else if(mk==='up'){if(mKind!=='up')$('#modal').innerHTML=upModal()}
 else if(mk==='set')$('#modal').innerHTML=setModal();
 else if(mk==='info')$('#modal').innerHTML=infoModal(S.info);
 else $('#modal').innerHTML='';
@@ -593,6 +610,25 @@ return '<div class="r'+(s==='k'?' sk':s==='r'?' sr2':'')+(se?' on':'')+'">'
 
 /* ---------- upload modal ---------- */
 let upFiles=[];
+/* The export date comes from the files, never from the person:
+   1. a date in a file name (Instagram names the download
+      instagram-<username>-YYYY-MM-DD-<code>.zip, and CSVs from this page
+      carry their date too);
+   2. for a zip without one, the newest date stamped on the files inside it;
+   3. otherwise when the files were last saved (unzipping keeps the date
+      Instagram made them).
+   It is never earlier than the newest follow in the files, and never in
+   the future. */
+const isoDay=ms=>new Date(ms).toISOString().slice(0,10);
+const nameDate=n=>{const m=/(20\d\d)[-_]?(0[1-9]|1[0-2])[-_]?(0[1-9]|[12]\d|3[01])/.exec(n||'');return m?m[1]+'-'+m[2]+'-'+m[3]:''};
+const nameUser=n=>{const m=/^instagram-([a-z0-9._]+)-20\d\d-\d\d-\d\d/i.exec(n||'');return m?m[1].toLowerCase():''};
+function guessDate(fs){for(const f of fs){const d=nameDate(f.name);if(d)return{d,how:'name'}}
+const lm=Math.max(0,...fs.map(f=>f.lastModified||0));return lm?{d:isoDay(lm),how:'saved'}:{d:'',how:''}}
+const HOW={name:'from the file name',zip:'from the files inside the zip',saved:'from when the files were saved',data:'from the newest follow in the files'};
+function pickFiles(fs){upFiles=fs;const z=$('#dz');if(z)z.querySelector('b').textContent=fs.length?fs.map(f=>f.name).join(', '):'Choose files or drop them here';
+const g=guessDate(fs),x=$('#dtx');if(x)x.textContent=fs.length&&g.d?'Export date: '+D2(g.d)+' ('+HOW[g.how]+(fs.some(f=>/\.zip$/i.test(f.name))&&g.how!=='name'?', checked again when you import':'')+')':'';
+const u=fs.map(f=>nameUser(f.name)).find(Boolean),un=$('#un');if(u&&un&&!un.value)un.value=u;
+if(u&&$('#pf')){const o=[...$('#pf').options].find(o=>o.value===u);if(o){$('#pf').value=u;const n=$('#nw');if(n)n.hidden=true}}}
 function upModal(){const names=Object.keys(S.P).filter(n=>n!=='example_user');
 return '<div class="mb"><h3>Upload your Instagram data</h3><p class="mu" style="margin:2px 0 0">Your files are read in this browser and never uploaded anywhere.</p>'
 +'<ol class="steps">'
@@ -603,14 +639,13 @@ return '<div class="mb"><h3>Upload your Instagram data</h3><p class="mu" style="
 +'<li>Set date range to <b>All time</b> and format to <b>JSON</b>. <em>HTML works too.</em></li>'
 +'<li>Wait for the email, download it, then add the files below.</li></ol>'
 +'<div class="note">'+INF+'<span>Instagram can take minutes or hours to prepare an export, and menu names move around between app versions.</span></div>'
-+'<div class="row2"><label class="fld"><span>Profile</span><select id="pf">'
++'<label class="fld"><span>Profile</span><select id="pf">'
 +(names.length?'<option value="">Choose…</option>':'')+names.map(n=>'<option value="'+esc(n)+'" '+(n===S.cur?'selected':'')+'>@'+esc(n)+'</option>').join('')
 +'<option value="__new" '+(names.length?'':'selected')+'>+ Add a new profile</option></select></label>'
-+'<label class="fld"><span>Export date</span><input type="date" id="dt" value="'+new Date().toISOString().slice(0,10)+'"></label></div>'
 +'<label class="fld" id="nw" '+(names.length?'hidden':'')+'><span>New username</span><input type="text" id="un" placeholder="yourusername" autocapitalize="off" spellcheck="false"></label>'
 +'<label class="drop" id="dz"><input type="file" id="fl" multiple accept=".json,.html,.zip,.csv"><b>Choose files or drop them here</b></label>'
 
-+'<p id="ms" class="mu" style="font-size:13px;margin:0"></p>'
++'<p id="dtx" class="mu" style="font-size:13px;margin:0 0 6px"></p><p id="ms" class="mu" style="font-size:13px;margin:0"></p>'
 +'<div class="mact"><button class="gh" data-a="close">Cancel</button><button class="pr" data-a="go">Import</button></div></div>'}
 
 /* ---------- settings ---------- */
@@ -623,20 +658,50 @@ function csvSave(){const p=cp();return saveFile('unfollowers-'+p.name+'-'+(snapD
 function backup(){const out={app:'unfollowers',v:1,at:new Date().toISOString(),profiles:{}};
 Object.keys(S.P).forEach(k=>{if(!S.P[k].demo)out.profiles[k]=S.P[k]});return JSON.stringify(out)}
 async function saveFile(fn,data,type){
-try{const d=window.claude&&await claude.use('downloads');if(d){await d.save({filename:fn,data});return say('Saved '+fn)}}
-catch(err){if(err&&err.code==='declined')return;}
+try{const d=window.claude&&await claude.use('downloads');if(d){await d.save({filename:fn,data});say('Saved '+fn);return true}}
+catch(err){if(err&&err.code==='declined')return false;}
 try{const b=new Blob([data],{type:type||'application/json'}),a=document.createElement('a'),u2=URL.createObjectURL(b);
-a.href=u2;a.download=fn;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u2),1500);say('Saved '+fn)}
-catch(err){say('Couldn’t save the file')}}
+a.href=u2;a.download=fn;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u2),1500);say('Saved '+fn);return true}
+catch(err){say('Couldn’t save the file');return false}}
+/* Restoring reads the file, then asks first (rstModal). Nothing is replaced
+   wholesale: for each profile the newer export's lists win, and marks are
+   merged account by account, keeping the most recent. Undo puts back what
+   was there before. */
 async function restore(f){try{const j=JSON.parse(await f.text());
 const ps=j&&j.profiles?j.profiles:(j&&j.name&&j.fing?{[j.name]:j}:null);
 if(!ps)return say('That file isn’t an Unfollowers backup');
-const names=Object.keys(ps);if(!names.length)return say('That backup has no profiles');
-names.forEach(k=>{const p=ps[k];if(p&&p.fing&&p.fers){p.name=k;p.fl=p.fl||emptyFl();p.log=p.log||[];p.meta=p.meta||{};S.P[k]=p}});
-S.cur=names[0];S.snap=-1;S.sel.clear();S.set=false;EC.k='';
-for(const k of names){touch(k);await save(k,true)}
-render();say('Restored '+names.length+' profile'+(names.length>1?'s':''))}
+const names=Object.keys(ps).filter(k=>k!=='example_user'&&ps[k]&&ps[k].fing&&ps[k].fers);
+if(!names.length)return say('That backup has no profiles');
+S.rst={ps,names,at:j.at||''};render()}
 catch(e){say('Couldn’t read that backup: '+(e.message||e))}}
+const rstPlan=(k,b)=>{const o=S.P[k];if(!o||o.demo)return 'new';return (b.date||'')>(o.date||'')?'backup':'mine'};
+function rstModal(){const r=S.rst,li=r.names.map(k=>{const b=r.ps[k],o=S.P[k],pl=rstPlan(k,b);
+return '<li style="margin-bottom:10px"><b>@'+esc(k)+'</b> · export from '+esc(D2(b.date)||'an unknown date')+'<br><span class="mu">'
++(pl==='new'?'Added as a new profile.':pl==='backup'?'The backup’s export is newer than yours ('+esc(D2(o.date))+'), so its lists replace yours. Marks are combined, keeping the most recent for each account.'
+:'Your export ('+esc(D2(o.date))+') is '+((b.date||'')===(o.date||'')?'the same one':'newer')+', so your lists stay. Marks from the backup are added where they’re more recent than yours.')+'</span></li>'}).join('');
+return '<div class="mb"><h3>Restore this backup?</h3><p class="mu" style="margin:2px 0 0">'+(r.at?'Made '+esc(D2(r.at.slice(0,10)))+'. ':'')+r.names.length+' profile'+(r.names.length>1?'s':'')+'. Nothing newer is overwritten, and you can undo straight after.</p>'
++'<ul style="margin:14px 0;padding-left:18px;font-size:13.5px;line-height:1.5">'+li+'</ul>'
++'<div class="mact"><button class="gh" data-a="rstno">Cancel</button><button class="pr" data-a="rstgo">Restore</button></div></div>'}
+async function doRestore(){const r=S.rst;S.rst=null;if(!r)return;const now=Math.round(Date.now()/1000),before={};
+for(const k of r.names){const b=r.ps[k],o=S.P[k],pl=rstPlan(k,b);
+before[k]=o&&!o.demo?JSON.parse(JSON.stringify(o)):null;
+const base=pl==='mine'?o:Object.assign({},b,{name:k,fl:b.fl||emptyFl(),log:b.log||[]});
+base.meta=mergeMeta(o&&!o.demo?o.meta:{},b.meta||{});
+if(o&&!o.demo)Object.keys(o.meta||{}).forEach(u=>{const x=o.meta[u],y=(b.meta||{})[u];if(y&&(y.t||0)===(x.t||0)&&base.meta[u]!==x)base.meta[u]=x});
+S.P[k]=base}
+S.cur=r.names[0];S.snap=-1;S.sel.clear();S.set=false;EC.k='';
+for(const k of r.names){touch(k);await save(k,true)}
+render();say('Restored '+r.names.length+' profile'+(r.names.length>1?'s':''),()=>undoRestore(before,now))}
+/* Undo stamps put-back marks with the current time, so the merge-on-save
+   keeps them rather than the restored ones. */
+async function undoRestore(before,at){const now=Math.max(at,Math.round(Date.now()/1000))+1;
+for(const k of Object.keys(before)){const o=before[k],cur=S.P[k];
+if(!o){await delProfile(k);continue}
+const meta=Object.assign({},o.meta||{});
+Object.keys((cur&&cur.meta)||{}).forEach(u=>{if(JSON.stringify(cur.meta[u])!==JSON.stringify(o.meta[u]))meta[u]=Object.assign({},o.meta[u]||{s:''},{t:now})});
+o.meta=meta;S.P[k]=o;touch(k);await save(k,true)}
+S.cur=Object.keys(before).find(k=>S.P[k])||S.cur;if(!S.P[S.cur])S.cur=Object.keys(S.P)[0];
+EC.k='';render();say('Restore undone')}
 function delSnap(p,i){
 if(i===-1){if(!p.log.length)return;const X=stateAt(p,0);p.fing=X.fing;p.fers=X.fers;p.date=p.log[0].pd||p.date;p.log.shift();S.snap=-1;EC.k='';sv(p.name,true);return}
 if(!p.log[i])return;
@@ -664,8 +729,8 @@ return '<div class="mb"><h3>Settings</h3>'
 +(coll?'Synced to your Claude account.':'Stored in this browser'+(persist==='yes'?', and the browser has agreed to keep it unless you clear site data.':persist==='no'?'. The browser may clear it if it runs low on space, or if you don’t open the page for a while. Keep a backup.':'.'))
 +(function(){const kb=dataKB();return kb?' Your profiles take about '+(kb>1024?(kb/1024).toFixed(1)+' MB':kb+' KB')+'.':''})()+'</p>'
 +'<div class="row2" style="gap:9px"><button class="gh" data-a="bkup" style="flex:0 0 auto">Download backup</button>'
-+'<label class="gh" style="flex:0 0 auto;padding:8px 14px;border-radius:10px;cursor:pointer;font-weight:600">Restore backup<input type="file" id="rs" accept=".json" style="display:none"></label></div>'
-+'<p class="mu" style="margin:10px 0 0;font-size:12px">A backup holds every profile with its history, marks and labels. Restoring replaces profiles of the same name.</p></div>'
++'<label for="rs" class="gh" style="flex:0 0 auto;padding:8px 14px;border-radius:10px;cursor:pointer;font-weight:600">Restore backup</label></div>'
++'<p class="mu" style="margin:10px 0 0;font-size:12px">A backup holds every profile with its history, marks and labels. Restoring asks first, keeps whichever export is newer, and combines marks.</p></div>'
 +'<div class="sset"><b>Export a spreadsheet</b><p class="mu">Every account in this profile as a CSV, with dates and how you marked them. Opens in Excel or Sheets, and can be imported back.</p><button class="gh" data-a="csv">Download CSV</button></div>'
 +(sn.length?'<div class="sset"><b>Delete a snapshot</b><p class="mu">Removes one upload. Deleting the latest rolls your data back to the one before it; deleting an older one just drops that point in history.</p>'
 +'<div class="row2"><select id="sd">'+sn.map(x=>'<option value="'+x[0]+'" '+(String(S.snapSel)===String(x[0])?'selected':'')+'>'+esc(x[1])+'</option>').join('')+'</select>'
@@ -773,7 +838,10 @@ else if(a==='up'){S.up=true;S.set=false;S.info=null;upFiles=[]}
 else if(a==='set'){S.set=!S.set;S.up=false;S.info=null;S.cfm='';if(S.set)storageInfo().then(render)}
 else if(a==='close'){S.up=false;S.set=false;S.info=null;S.cfm=''}
 else if(a==='csv')return csvSave();
-else if(a==='bkup')return saveFile('unfollowers-backup-'+new Date().toISOString().slice(0,10)+'.json',backup());
+else if(a==='rstgo')return doRestore();
+else if(a==='rstno'){S.rst=null}
+else if(a==='bkup')return saveFile('unfollowers-backup-'+new Date().toISOString().slice(0,10)+'.json',backup()).then(ok=>{if(ok){try{localStorage.setItem('ig_bk',String(Date.now()))}catch(e){}render()}});
+else if(a==='bklater'){try{localStorage.setItem('ig_bklater',String(Date.now()))}catch(e){}}
 else if(a==='dsnap'){const sel=$('#sd');if(sel)S.snapSel=+sel.value;
 if(S.cfm!=='snap'){S.cfm='snap'}else{S.cfm='';delSnap(p,S.snapSel);S.snapSel=-1}}
 else if(a==='dhist'){if(S.cfm!=='hist'){S.cfm='hist'}else{S.cfm='';p.log=[];S.snap=-1;EC.k='';sv(p.name,true);say('History cleared')}}
@@ -817,10 +885,10 @@ else if(d.sel!==undefined){const v=view(),i=+d.i;
 if(shiftOn&&lastI!==null){const a=Math.min(lastI,i),b2=Math.max(lastI,i);for(let j=a;j<=b2;j++)if(v[j])t.checked?S.sel.add(v[j]):S.sel.delete(v[j])}
 else t.checked?S.sel.add(d.sel):S.sel.delete(d.sel);
 lastI=i;shiftOn=false}
-else if(t.id==='rs'){const f=(t.files||[])[0];if(f)restore(f);return}
+else if(t.id==='rs'){const f=(t.files||[])[0];t.value='';if(f)restore(f);return}
 else if(t.id==='sd'){S.snapSel=+t.value;S.cfm='';return render()}
 else if(t.id==='pf'){const n=$('#nw');if(n)n.hidden=t.value!=='__new';if(t.value==='__new'&&$('#un'))$('#un').focus();return}
-else if(t.id==='fl'){upFiles=[...t.files];const z=$('#dz');if(z)z.querySelector('b').textContent=upFiles.length?upFiles.map(f=>f.name).join(', '):'Choose files or drop them here';return}
+else if(t.id==='fl'){pickFiles([...t.files]);return}
 else return;
 render()});
 
@@ -830,14 +898,14 @@ if(S.ck&&!(e.target.matches&&e.target.matches('input,select,textarea'))){
 const k={ArrowRight:'skip',ArrowLeft:'back',k:'k',K:'k',x:'r',X:'r'}[e.key];
 if(k){e.preventDefault();return ckAct(k)}
 if(e.key==='Escape'){S.ck=null;ckRender();return render()}return}
-if((S.up||S.set||S.info)&&e.key==='Escape'){S.up=false;S.set=false;S.info=null;S.cfm='';render()}
+if((S.rst||S.up||S.set||S.info)&&e.key==='Escape'){S.rst=null;S.up=false;S.set=false;S.info=null;S.cfm='';render()}
 if(e.key==='/'&&!S.up&&!S.ck&&!(e.target.matches&&e.target.matches('input,select,textarea'))){e.preventDefault();const q=$('#q');if(q&&!q.hidden)q.focus()}});
 document.addEventListener('dragover',e=>{if(!S.up)return;e.preventDefault();const z=$('#dz');if(z)z.classList.add('ov')});
 document.addEventListener('dragleave',e=>{const z=$('#dz');if(z&&e.target===z)z.classList.remove('ov')});
 document.addEventListener('drop',e=>{if(!S.up)return;e.preventDefault();const z=$('#dz');if(z)z.classList.remove('ov');
-upFiles=[...(e.dataTransfer?e.dataTransfer.files:[])];if(z&&upFiles.length)z.querySelector('b').textContent=upFiles.map(f=>f.name).join(', ')});
+const fs2=[...(e.dataTransfer?e.dataTransfer.files:[])];if(fs2.length)pickFiles(fs2)});
 $('#q').addEventListener('input',()=>{S.n=200;render()});
-$('#modal').addEventListener('click',e=>{if(e.target.id==='modal'){S.up=false;S.set=false;S.info=null;S.cfm='';render()}});
+$('#modal').addEventListener('click',e=>{if(e.target.id==='modal'){S.rst=null;S.up=false;S.set=false;S.info=null;S.cfm='';render()}});
 
 render();
 (async()=>{await storageInfo();try{if(window.claude){const r=await Promise.all([claude.use('user'),claude.use('db')]);if(r[0]&&r[1])coll=r[1].collection('data/users/'+await r[0].id())}}catch(e){}load()})();
