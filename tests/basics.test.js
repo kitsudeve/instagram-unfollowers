@@ -42,6 +42,7 @@ module.exports = {
     const two = await openDevice(browser);
     await two.page.click('[data-a=set]');
     await two.page.setInputFiles('#rs', { name: 'b.json', mimeType: 'application/json', buffer: Buffer.from(bk) });
+    await two.page.click('[data-a=rstgo]');
     await settle(two.page);
     await reload(two.page);
     assert.deepStrictEqual(await marks(two.page, 'me'), { alice: 'k' });

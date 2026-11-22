@@ -20,6 +20,8 @@ async function openDevice(browser, db, ctx) {
   const context = ctx || (await browser.newContext());
   // Keep the tests offline-safe: the font is cosmetic.
   await context.route(/fonts\.(googleapis|gstatic)\.com/, r => r.abort());
+  // Serve the zip reader locally so zip imports work offline.
+  await context.route(/cdnjs\.cloudflare\.com\/.*jszip/, r => r.fulfill({ path: require.resolve('jszip/dist/jszip.min.js'), contentType: 'text/javascript' }));
   if (db && !ctx) {
     await context.exposeBinding('__dbGet', (_, k) => (db.docs.has(k) ? JSON.parse(db.docs.get(k)) : null));
     await context.exposeBinding('__dbSet', (_, k, v) => {
@@ -64,18 +66,21 @@ const followingJson = m => JSON.stringify({ relationships_following: Object.entr
   title: u, string_list_data: [{ href: 'https://www.instagram.com/_u/' + u, timestamp: t }],
 })) });
 
-// Import through the real Upload dialog.
-async function importExport(page, { profile, fing, fers, date }) {
+// Import through the real Upload dialog. `date` sets the files' saved date,
+// which is where the page reads the export date from for loose files;
+// `names` overrides the file names (e.g. to put a date in them).
+async function importExport(page, { profile, fing, fers, date, names, expectError }) {
   await page.click('[data-a=up]');
   const opts = await page.$$eval('#pf option', os => os.map(o => o.value));
   if (opts.includes(profile)) await page.selectOption('#pf', profile);
   else { await page.selectOption('#pf', '__new'); await page.fill('#un', profile); }
-  if (date) await page.fill('#dt', date);
   const files = [];
-  if (fing) files.push({ name: 'following.json', mimeType: 'application/json', buffer: Buffer.from(followingJson(fing)) });
-  if (fers) files.push({ name: 'followers_1.json', mimeType: 'application/json', buffer: Buffer.from(followersJson(fers)) });
-  await page.setInputFiles('#fl', files);
+  if (fing) files.push([(names && names.fing) || 'following.json', followingJson(fing)]);
+  if (fers) files.push([(names && names.fers) || 'followers_1.json', followersJson(fers)]);
+  const lm = date ? Date.parse(date + 'T12:00:00Z') : Date.now();
+  await page.evaluate(([fs, lm]) => pickFiles(fs.map(([n, t]) => new File([t], n, { type: 'application/json', lastModified: lm }))), [files, lm]);
   await page.click('[data-a=go]');
+  if (expectError) { await page.waitForSelector('#ms .err'); return page.textContent('#ms'); }
   await page.waitForFunction(() => !S.up);
   await settle(page);
 }
@@ -93,4 +98,4 @@ const mark = (page, u, v) => page.click('[data-a=' + (v === 'k' ? 'mk' : 'mr') +
 
 async function switchProfile(page, n) { await page.selectOption('[data-p]', n); }
 
-module.exports = { launch, openDevice, reload, makeDb, importExport, settle, marks, mark, switchProfile };
+module.exports = { followersJson, followingJson, launch, openDevice, reload, makeDb, importExport, settle, marks, mark, switchProfile };
