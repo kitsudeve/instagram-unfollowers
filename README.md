@@ -14,24 +14,20 @@ Your export is read in the browser. Nothing is uploaded anywhere.
 3. Under **Customize information**, clear every section and tick **Followers
    and following** only.
 4. Date range **All time**, format **JSON** (HTML also works).
-5. Download the export, then drop the zip (or the files from it) into the page.
+5. Download the export, then drop the whole zip into the page.
 
 The export date is read from the files: from the zip's name, otherwise from
 the dates stamped on the files. An export older than the one a profile
 already has is refused, so it can't scramble the changes log.
 
-The other files in that folder are optional and add labels to accounts:
+The zip's other files add labels to accounts, so uploading only the
+followers and following files leaves them out:
 `close_friends`, `pending_follow_requests`, `recently_unfollowed_profiles`,
 `profiles_you've_favorited`, `blocked_profiles`, `recent_follow_requests`.
 
 ## Web address
 
-The app lives at https://unfollower-checker-kitsudeve.vercel.app. The old
-address (instagram-unfollowers-iota.vercel.app) still serves it, but browser
-storage belongs to one address, so there it offers to move saved data across:
-it opens the new address, which asks before merging the data in like a
-restore. Nothing is deleted from the old address. Visitors there with nothing
-saved, or whose data has moved, are sent to the new address.
+https://unfollower-checker-kitsudeve.vercel.app
 
 ## Where data lives
 
@@ -57,15 +53,19 @@ else is inline.
 
 ## Tests
 
-Browser tests live in `tests/` and drive the real page in headless Chromium
-with Playwright. The saving tests use a fake Claude database shared between
-several "devices" (separate browser contexts), so two-device and failed-sync
-cases can be checked without a Claude account.
+The `tests` folder holds automatic checks. Each one opens the app in a hidden
+browser, clicks through it the way a person would (uploading an export,
+marking accounts, restoring a backup and so on) and checks the result is
+right. They exist so that a change can't quietly break something that used to
+work: every bug that has been fixed has a check that would fail if it came
+back.
+
+You don't need to run them to use the app. To run them on a computer with
+Node.js installed:
 
     cd tests
     npm install
-    npm test            # or: node run.js "bug 2" to run matching tests only
+    npm test
 
-`tests/safety.test.js` covers restoring, failed saves and export dates.
-
-Each data-loss fix has its own test in `tests/saving.test.js`.
+Each check prints `ok` or `FAIL` with its name, for example
+"bug 1: a mark is saved even if you switch profile straight away".

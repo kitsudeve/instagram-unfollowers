@@ -363,44 +363,7 @@ catch(e){saveErr=(e&&e.message)||String(e)}
 ready=true;EC.k='';
 for(const n of Object.keys(dirty))await save(n,true);
 for(const n of Object.keys(push))if(!dirty[n])await save(n,push[n]===2);
-render();moveInit()}
-
-/* ---------- new address ----------
-   Browser storage belongs to one web address, so data saved on the old
-   address isn't visible on the new one. The old address offers to move it:
-   it opens the new address in a new tab, and once that tab says it's ready,
-   hands it a backup. The new tab asks first (the usual restore screen, which
-   merges and never overwrites newer data), then tells the old tab it's done.
-   Nothing is deleted from the old address. Visitors to the old address with
-   nothing saved there, or whose data has been moved, are sent straight on. */
-const NEW_ORIGIN='https://unfollower-checker-kitsudeve.vercel.app',OLD_ORIGINS=['https://instagram-unfollowers-iota.vercel.app'];
-const onOld=()=>OLD_ORIGINS.indexOf(location.origin)>=0,onNew=()=>location.origin===NEW_ORIGIN;
-let mvWin=null,mvState='';
-function moveInit(){
-if(onOld()){let moved=0;try{moved=+localStorage.getItem('ig_moved')||0}catch(e){}
-if(!mine().length||moved){location.replace(NEW_ORIGIN+'/');return}
-mvState='offer';render()}
-else if(onNew()&&/^#move$/.test(location.hash)&&window.opener){history.replaceState(null,'',location.pathname);
-mvState='waiting';render();OLD_ORIGINS.forEach(o=>{try{window.opener.postMessage({t:'uc-ready'},o)}catch(e){}})}}
-function moveStart(){mvWin=window.open(NEW_ORIGIN+'/#move','_blank');
-if(!mvWin){mvState='blocked';render();return}mvState='sending';render()}
-addEventListener('message',e=>{const m=e.data||{};
-if(onOld()&&e.origin===NEW_ORIGIN){
-if(m.t==='uc-ready'&&e.source){e.source.postMessage({t:'uc-data',backup:backup()},NEW_ORIGIN)}
-else if(m.t==='uc-done'){try{localStorage.setItem('ig_moved',String(Date.now()))}catch(e2){}mvState='done';render()}}
-else if(onNew()&&OLD_ORIGINS.indexOf(e.origin)>=0&&m.t==='uc-data'){
-let j=null;try{j=JSON.parse(m.backup)}catch(e2){}
-const ps=j&&j.profiles||{},names=Object.keys(ps).filter(k=>k!=='example_user'&&ps[k]&&ps[k].fing&&ps[k].fers);
-if(!names.length){mvState='';render();return}
-mvState='';S.rst={ps,names,at:j.at||'',move:{src:e.source,origin:e.origin}};render()}});
-function moveBanner(){if(!mvState)return'';
-const t={offer:'Unfollower Checker has a new address. Your data is saved on this one, so move it across before you carry on. Nothing here is deleted.',
-sending:'Finish in the new tab: it will ask before bringing your data in. Keep this tab open until it’s done.',
-blocked:'Your browser blocked the new tab. Allow pop-ups for this site and try again, or download a backup here and restore it at the new address.',
-done:'Your data has been moved. From now on, use the new address.',
-waiting:'Bringing your data over from the old address…'}[mvState];
-const btn=mvState==='offer'||mvState==='blocked'?'<button data-a="mvgo" style="background:var(--bl);color:#fff">Move my data</button>':mvState==='done'?'<a class="pr" style="padding:6px 12px;border-radius:10px;font-size:12px" href="'+NEW_ORIGIN+'/">Go to the new address</a>':'';
-return '<div class="hist" id="mvb" style="flex-wrap:wrap;background:#0095f614;border-color:#0095f644;color:#cfe8ff"><span style="flex:1 1 220px">'+t+'</span>'+btn+'</div>'}
+render()}
 
 /* ---------- parsing ---------- */
 function splitCSV(t){const rows=[];let row=[],cur='',q=false;
@@ -428,8 +391,12 @@ function parse(n,t){const b=n.split('/').pop();
 if(/\.csv$/i.test(b)){const c=fromCSV(t);return c?{k:'csv',m:c}:null}
 const k=/^followers/i.test(b)?'fers':/^following/i.test(b)?'fing':(XF.find(x=>b.toLowerCase().indexOf(x[0])>=0)||[])[1]||null;
 if(!k)return null;const m={};
-if(/\.json$/i.test(n)){let j=JSON.parse(t);if(!Array.isArray(j))j=j.relationships_following||Object.values(j)[0]||[];
-(j||[]).forEach(e=>{const s=(e.string_list_data||[])[0]||{},u=(e.title||s.value||'').toLowerCase();if(u)m[u]=s.timestamp||0})}
+if(/\.json$/i.test(n)){let j=JSON.parse(t);if(!Array.isArray(j))j=j.relationships_following||Object.values(j||{}).find(Array.isArray)||[];
+/* The username can sit in the title, the value, or only in the link
+   (instagram.com/name or instagram.com/_u/name), depending on the file and
+   on when Instagram made the export. */
+(j||[]).forEach(e=>{const s=(e.string_list_data||[])[0]||{},hm=/instagram\.com\/(?:_u\/)?([A-Za-z0-9._]+)/.exec(s.href||''),
+u=(e.title||s.value||(hm?hm[1]:'')||'').toLowerCase();if(u)m[u]=s.timestamp||0})}
 else{const SKIP=/^(p|reel|reels|tv|explore|stories|accounts|direct|about|legal|privacy|terms|developer|directory|help|press|api)$/;
 new DOMParser().parseFromString(t,'text/html').querySelectorAll('a[href*="instagram.com"]').forEach(a=>{
 const h=(a.getAttribute('href')||'').split('?')[0].replace(/\/+$/,''),mm=/instagram\.com\/(?:_u\/)?([A-Za-z0-9._]+)$/.exec(h);
@@ -489,11 +456,11 @@ if(g.fa.length+g.fr.length+g.ga.length+g.gr.length+(g.rn||[]).length)P.log.unshi
 if(got.fing)P.fing=got.fing;if(got.fers)P.fers=got.fers;P.date=d;
 P.fl=P.fl||emptyFl();FKEYS.forEach(k=>{if(got[k])P.fl[k]=got[k]});
 if(got.csv){P.fl=got.csv.fl;Object.keys(got.csv.meta).forEach(u=>P.meta[u]=got.csv.meta[u])}
-const nFl=FKEYS.reduce((a,k)=>a+Object.keys(P.fl[k]||{}).length,0);
+const nFl=FKEYS.reduce((a,k)=>a+Object.keys(P.fl[k]||{}).length,0),gotFl=FKEYS.filter(k=>got[k]).map(k=>FPL[k].toLowerCase());
 S.P[nm]=P;S.cur=nm;S.snap=-1;S.tab='nofb';S.sel.clear();S.up=false;upFiles=[];EC.k='';
 $('#modal').innerHTML='';touch(nm);render();save(nm,true);
 const nFo=Object.keys(P.fers).length;
-say('Imported the '+D2(d)+' export: '+Object.keys(P.fing).length+' following and '+nFo+(nFo===1?' follower':' followers')+(nFl?', plus '+nFl+' from your other lists':'')
+say('Imported the '+D2(d)+' export: '+Object.keys(P.fing).length+' following and '+nFo+(nFo===1?' follower':' followers')+(gotFl.length?', plus '+nFl+' from your other lists ('+gotFl.join(', ')+')':got.csv?'':'. No close friends, favourites or other lists were in these files: upload the whole zip to include them')
 +(reset.length?' · '+reset.length+' mark'+(reset.length>1?'s':'')+' cleared because the relationship changed':'')
 +(Object.keys(ren).length?' · '+Object.keys(ren).length+' username change'+(Object.keys(ren).length>1?'s':'')+' followed through':''))}
 
@@ -589,7 +556,7 @@ $('#hd').innerHTML='<span class="logo">Unfollower Checker</span>'
 $('#st').innerHTML=[[F,'Following'],[R,'Followers']].map((x,i)=>{const d=hasPv?x[0]-(i?Object.keys(pv.fers).length:Object.keys(pv.fing).length):0;
 return '<div class="cd"><b>'+x[0]+'</b><span class="mu">'+x[1]+'</span>'+(hasPv?'<i class="'+(d>0?'up':d<0?'dn':'fl')+'">'+(d>0?'▲ +'+d:d<0?'▼ '+d:'– 0')+'</i>':'')+'</div>'}).join('');
 
-$('#hb').innerHTML=moveBanner()+(!mvState&&needBk()?'<div class="hist" id="bkr" style="flex-wrap:wrap"><span style="flex:1 1 220px">Your data is only saved in this browser, which can clear it (Safari does after 7 days without a visit). '+(lastBk()?'Your last backup was '+rel(lastBk()/1000).toLowerCase()+'.':'You haven’t downloaded a backup yet.')+'</span><button data-a="bkup">Download backup</button><button data-a="bklater" class="gh" style="background:none">Later</button></div>':'')+(saveErr?'<div class="hist" style="background:#ff4d4f14;border-color:#ff4d4f44;color:#ffb3b4"><span>Your last change couldn’t be saved: '+esc(saveErr)+'. Download a backup from Settings so you don’t lose it.</span><button data-a="set" style="background:#ff4d4f22;color:#ffb3b4">Settings</button></div>':'')+(ed?'':'<div class="hist"><span>Viewing your data as it was on '+D2(snapDate(p))+'. Checking and uploading are off while you look back.</span><button data-a="latest">Back to latest</button></div>');
+$('#hb').innerHTML=(needBk()?'<div class="hist" id="bkr" style="flex-wrap:wrap"><span style="flex:1 1 220px">Your data is only saved in this browser, which can clear it (Safari does after 7 days without a visit). '+(lastBk()?'Your last backup was '+rel(lastBk()/1000).toLowerCase()+'.':'You haven’t downloaded a backup yet.')+'</span><button data-a="bkup">Download backup</button><button data-a="bklater" class="gh" style="background:none">Later</button></div>':'')+(saveErr?'<div class="hist" style="background:#ff4d4f14;border-color:#ff4d4f44;color:#ffb3b4"><span>Your last change couldn’t be saved: '+esc(saveErr)+'. Download a backup from Settings so you don’t lose it.</span><button data-a="set" style="background:#ff4d4f22;color:#ffb3b4">Settings</button></div>':'')+(ed?'':'<div class="hist"><span>Viewing your data as it was on '+D2(snapDate(p))+'. Checking and uploading are off while you look back.</span><button data-a="latest">Back to latest</button></div>');
 
 if(S.cks.scope==='pend'&&!l.pend.length)S.cks.scope='nofb';
 const scope=(CKS.find(x=>x[0]===S.cks.scope)||CKS[0])[1],unc=(l[S.cks.scope]||[]).filter(u=>!st(p.meta[u]||{})&&!u.startsWith('__deleted__')).length;
@@ -674,7 +641,7 @@ return '<div class="mb"><h3>Upload your Instagram data</h3><p class="mu" style="
 +'<li>Pick your profile, then <b>Export to device</b>.</li>'
 +'<li>Under <b>Customize information</b>, clear every section and tick <b>Followers and following</b> only. <em>Other sections make the file far bigger and slower.</em></li>'
 +'<li>Set date range to <b>All time</b> and format to <b>JSON</b>. <em>HTML works too.</em></li>'
-+'<li>Wait for the email, download it, then add the files below.</li></ol>'
++'<li>Wait for the email, download it, then add the zip below. <em>Adding the whole zip also brings in close friends, favourites and your other lists.</em></li></ol>'
 +'<div class="note">'+INF+'<span>Instagram can take minutes or hours to prepare an export, and menu names move around between app versions.</span></div>'
 +'<label class="fld"><span>Profile</span><select id="pf">'
 +(names.length?'<option value="">Choose…</option>':'')+names.map(n=>'<option value="'+esc(n)+'" '+(n===S.cur?'selected':'')+'>@'+esc(n)+'</option>').join('')
@@ -716,7 +683,7 @@ function rstModal(){const r=S.rst,li=r.names.map(k=>{const b=r.ps[k],o=S.P[k],pl
 return '<li style="margin-bottom:10px"><b>@'+esc(k)+'</b> · export from '+esc(D2(b.date)||'an unknown date')+'<br><span class="mu">'
 +(pl==='new'?'Added as a new profile.':pl==='backup'?'The backup’s export is newer than yours ('+esc(D2(o.date))+'), so its lists replace yours. Marks are combined, keeping the most recent for each account.'
 :'Your export ('+esc(D2(o.date))+') is '+((b.date||'')===(o.date||'')?'the same one':'newer')+', so your lists stay. Marks from the backup are added where they’re more recent than yours.')+'</span></li>'}).join('');
-return '<div class="mb"><h3>'+(r.move?'Bring your data to the new address?':'Restore this backup?')+'</h3><p class="mu" style="margin:2px 0 0">'+(r.move?'From '+esc(r.move.origin.replace('https://',''))+'. ':r.at?'Made '+esc(D2(r.at.slice(0,10)))+'. ':'')+r.names.length+' profile'+(r.names.length>1?'s':'')+'. Nothing newer is overwritten, and you can undo straight after.</p>'
+return '<div class="mb"><h3>Restore this backup?</h3><p class="mu" style="margin:2px 0 0">'+(r.at?'Made '+esc(D2(r.at.slice(0,10)))+'. ':'')+r.names.length+' profile'+(r.names.length>1?'s':'')+'. Nothing newer is overwritten, and you can undo straight after.</p>'
 +'<ul style="margin:14px 0;padding-left:18px;font-size:13.5px;line-height:1.5">'+li+'</ul>'
 +'<div class="mact"><button class="gh" data-a="rstno">Cancel</button><button class="pr" data-a="rstgo">Restore</button></div></div>'}
 async function doRestore(){const r=S.rst;S.rst=null;if(!r)return;const now=Math.round(Date.now()/1000),before={};
@@ -728,8 +695,7 @@ if(o&&!o.demo)Object.keys(o.meta||{}).forEach(u=>{const x=o.meta[u],y=(b.meta||{
 S.P[k]=base}
 S.cur=r.names[0];S.snap=-1;S.sel.clear();S.set=false;EC.k='';
 for(const k of r.names){touch(k);await save(k,true)}
-render();say('Restored '+r.names.length+' profile'+(r.names.length>1?'s':''),()=>undoRestore(before,now));
-if(r.move){try{r.move.src.postMessage({t:'uc-done'},r.move.origin)}catch(e){}}}
+render();say('Restored '+r.names.length+' profile'+(r.names.length>1?'s':''),()=>undoRestore(before,now));}
 /* Undo stamps put-back marks with the current time, so the merge-on-save
    keeps them rather than the restored ones. */
 async function undoRestore(before,at){const now=Math.max(at,Math.round(Date.now()/1000))+1;
@@ -877,7 +843,6 @@ else if(a==='set'){S.set=!S.set;S.up=false;S.info=null;S.cfm='';if(S.set)storage
 else if(a==='close'){S.up=false;S.set=false;S.info=null;S.cfm=''}
 else if(a==='csv')return csvSave();
 else if(a==='rstgo')return doRestore();
-else if(a==='mvgo')return moveStart();
 else if(a==='rstno'){S.rst=null}
 else if(a==='bkup')return saveFile('unfollower-checker-backup-'+new Date().toISOString().slice(0,10)+'.json',backup()).then(ok=>{if(ok){try{localStorage.setItem('ig_bk',String(Date.now()))}catch(e){}render()}});
 else if(a==='bklater'){try{localStorage.setItem('ig_bklater',String(Date.now()))}catch(e){}}
