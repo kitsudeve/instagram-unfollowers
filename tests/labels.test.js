@@ -75,4 +75,32 @@ module.exports = {
     assert.deepStrictEqual(await page.evaluate(() => Object.keys(S.P.me.fl.cf)), ['bob']);
     await context.close();
   },
+  // The shape of Instagram's newer exports (checked against a real 2025 export,
+  // rebuilt here with made-up accounts): a bare list of label_values entries,
+  // where URL is the person's own website.
+  async 'newer export lists (label_values) fill close friends, favourites, requests and blocked'(browser) {
+    const { context, page } = await openDevice(browser);
+    const lv = (users, site) => JSON.stringify(users.map((u, i) => ({ timestamp: T + i, media: [], label_values: [
+      { label: 'URL', value: site && i === 0 ? 'https://example.com/shop' : '' },
+      { label: 'Name', value: i ? 'Someone ' + i : '' },
+      { label: 'Username', value: u }] })));
+    const msg = await importZip(page, {
+      'followers_1.json': followersJson({ bob: T, carol: T }), 'following.json': followingJson({ alice: T, bob: T, carol: T }),
+      'close_friends.json': lv(['bob', 'carol'], true),
+      "profiles_you've_favorited.json": lv(['alice']),
+      'pending_follow_requests.json': lv(['dan_private', 'erin.private']),
+      'blocked_profiles.json': lv(['spam.bot']),
+      'removed_suggestions.json': lv(['ignored_one']),
+    });
+    const fl = await page.evaluate(() => S.P.me.fl);
+    assert.deepStrictEqual(Object.keys(fl.cf).sort(), ['bob', 'carol']);
+    assert.deepStrictEqual(Object.keys(fl.fav), ['alice']);
+    assert.deepStrictEqual(Object.keys(fl.pend).sort(), ['dan_private', 'erin.private']);
+    assert.deepStrictEqual(Object.keys(fl.bl), ['spam.bot']);
+    assert.strictEqual(fl.pend.dan_private, T, 'keeps the request date');
+    assert.ok(/close friends/.test(msg) && /blocked/.test(msg), msg);
+    const tabs = await page.$$eval('#tb button', bs => bs.map(b => b.textContent));
+    assert.ok(tabs.includes('Requests2') && tabs.includes('Blocked1'), tabs.join());
+    await context.close();
+  },
 };

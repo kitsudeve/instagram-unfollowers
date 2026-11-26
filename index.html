@@ -115,7 +115,7 @@ input[type=checkbox]:checked::after{content:"";position:absolute;left:5px;top:1.
 .ua.g{color:#8ff0bd}.ua.r{color:#ffb3b4}.ua.n{color:var(--mu)}
 /* toast + modal */
 #msg{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#242424;border:1px solid var(--bd);padding:9px 11px 9px 17px;border-radius:12px;z-index:60;animation:pop .2s ease;box-shadow:0 8px 24px #000a;max-width:92vw;display:flex;align-items:center;gap:14px}
-#msg button{padding:5px 12px;font-size:13px}
+#msg button{padding:5px 12px;font-size:13px}#msg.stay{align-items:flex-start;max-width:min(560px,92vw)}#msg .msgx{background:none;color:var(--mu);font-size:20px;line-height:1;padding:0 4px;flex:none}#msg .msgx:hover{color:var(--tx)}
 .sset{border-top:1px solid var(--bd);padding:15px 0}.sset>b{display:block;margin-bottom:3px}
 .sset p{margin:0 0 11px;font-size:13px}.sset .row2{align-items:flex-end}
 .dng{color:var(--rd);border-color:#ff4d4f44}.dng:hover{background:#ff4d4f1a}
@@ -305,10 +305,11 @@ async function storageInfo(){try{if(!navigator.storage||!navigator.storage.persi
 persist=await navigator.storage.persisted()?'yes':(await navigator.storage.persist()?'yes':'no')}
 catch(e){persist='unknown'}}
 let undoFn=null;
-function say(t,undo){const m=$('#msg');undoFn=undo||null;
-m.innerHTML='<span></span>'+(undo?'<button class="gh" data-a="undo">Undo</button>':'');
-m.firstChild.textContent=t;m.hidden=!t;clearTimeout(mt);
-if(t)mt=setTimeout(()=>{m.hidden=true;undoFn=null},undo?7000:4000)}
+/* stay: the message waits for its × (used for the import summary, which is long). */
+function say(t,undo,stay){const m=$('#msg');undoFn=undo||null;
+m.innerHTML='<span></span>'+(undo?'<button class="gh" data-a="undo">Undo</button>':'')+(stay?'<button class="msgx" data-a="msgx" aria-label="Close message" title="Close">×</button>':'');
+m.firstChild.textContent=t;m.hidden=!t;clearTimeout(mt);m.classList.toggle('stay',!!stay);
+if(t&&!stay)mt=setTimeout(()=>{m.hidden=true;undoFn=null},undo?7000:4000)}
 let ready=false,saveErr='',idxDel={};const dirty={},timers={};
 const lsNum=k=>{try{return +localStorage.getItem(k)||0}catch(e){return 0}};
 const lastBk=()=>lsNum('ig_bk');
@@ -422,8 +423,14 @@ if(!k)return null;const m={};
 if(/\.json$/i.test(n)){let j=JSON.parse(t);if(!Array.isArray(j))j=j.relationships_following||Object.values(j||{}).find(Array.isArray)||[];
 /* The username can sit in the title, the value, or only in the link
    (instagram.com/name or instagram.com/_u/name), depending on the file and
-   on when Instagram made the export. */
-(j||[]).forEach(e=>{const s=(e.string_list_data||[])[0]||{},hm=/instagram\.com\/(?:_u\/)?([A-Za-z0-9._]+)/.exec(s.href||''),
+   on when Instagram made the export. Newer exports (2025 on) write the
+   other lists (close friends, favourites, blocked, requests…) as
+   {timestamp, label_values:[{label:'URL'},{label:'Name'},{label:'Username',value}]},
+   where URL is the person's own website, not their profile. */
+(j||[]).forEach(e=>{if(!e||typeof e!=='object')return;
+if(Array.isArray(e.label_values)){const lv=e.label_values.find(x=>x&&/^user ?name$/i.test(x.label||''));
+const u=((lv&&lv.value)||'').trim().replace(/^@/,'').toLowerCase();if(/^[a-z0-9._]+$/.test(u))m[u]=e.timestamp||0;return}
+const s=(e.string_list_data||[])[0]||{},hm=/instagram\.com\/(?:_u\/)?([A-Za-z0-9._]+)/.exec(s.href||''),
 u=(e.title||s.value||(hm?hm[1]:'')||'').toLowerCase();if(u)m[u]=s.timestamp||0})}
 else{const SKIP=/^(p|reel|reels|tv|explore|stories|accounts|direct|about|legal|privacy|terms|developer|directory|help|press|api)$/;
 new DOMParser().parseFromString(t,'text/html').querySelectorAll('a[href*="instagram.com"]').forEach(a=>{
@@ -475,7 +482,10 @@ g.fa=g.fa.filter(u=>newN.indexOf(u)<0);g.ga=g.ga.filter(u=>newN.indexOf(u)<0)}
 g.frT=ts(P.fing,g.fr);g.grT=ts(P.fers,g.gr);
 const nF2=got.fing||P.fing,nE2=got.fers||P.fers,rel=(f,e2,u)=>(u in f?1:0)+(u in e2?2:0);
 Object.keys(P.meta).forEach(u=>{if(!st(P.meta[u])||sk(P.meta[u]))return;
-if(rel(P.fing,P.fers,u)!==rel(nF2,nE2,ren[u]||u)){P.meta[u].s='';P.meta[u].t=Math.round(Date.now()/1000);delete P.meta[u].sk;delete P.meta[u].k;delete P.meta[u].x;reset.push(u)}});
+const r0=rel(P.fing,P.fers,u),r1=rel(nF2,nE2,ren[u]||u);
+/* You unfollowed them and they don't follow you: that's the outcome you
+   marked for, not a change to review again, so the mark stays and it isn't logged. */
+if(r0!==r1&&!((r0&1)&&r1===0)){P.meta[u].s='';P.meta[u].t=Math.round(Date.now()/1000);delete P.meta[u].sk;delete P.meta[u].k;delete P.meta[u].x;reset.push(u)}});
 Object.keys(ren).forEach(o2=>{const nn=ren[o2];
 if(P.meta[o2]){P.meta[nn]=P.meta[o2];P.meta[o2]={s:'',t:Math.round(Date.now()/1000)}}
 FKEYS.forEach(k=>{const b=(P.fl||{})[k];if(b&&b[o2]!==undefined){b[nn]=b[o2];delete b[o2]}})});
@@ -490,7 +500,7 @@ $('#modal').innerHTML='';touch(nm);render();save(nm,true);
 const nFo=Object.keys(P.fers).length;
 say('Imported the '+D2(d)+' export: '+Object.keys(P.fing).length+' following and '+nFo+(nFo===1?' follower':' followers')+(gotFl.length?', plus '+nFl+' from your other lists ('+gotFl.join(', ')+')':got.csv?'':'. No close friends, favourites or other lists were in these files: upload the whole zip to include them')
 +(reset.length?' · '+reset.length+' mark'+(reset.length>1?'s':'')+' cleared because the relationship changed':'')
-+(Object.keys(ren).length?' · '+Object.keys(ren).length+' username change'+(Object.keys(ren).length>1?'s':'')+' followed through':''))}
++(Object.keys(ren).length?' · '+Object.keys(ren).length+' username change'+(Object.keys(ren).length>1?'s':'')+' followed through':''),null,true)}
 
 /* ---------- charts ---------- */
 const sw=(c,t)=>'<span><i class="sw" style="background:'+c+'"></i>'+t+'</span>';
@@ -881,7 +891,7 @@ e.preventDefault();const a=b.dataset.a,p=cp();
 if(a==='tab'){S.tab=b.dataset.t;S.n=200;S.sel.clear();lastI=null;if(S.tab!=='fb'&&/^y/.test(S.sort))S.sort='az';
 if(S.tab==='nofb'||S.tab==='fb'||S.tab==='fans'||S.tab==='pend')S.cks.scope=S.tab}
 else if(a==='info'){S.info=b.dataset.u;S.up=false;S.set=false}
-else if(a==='up'){S.up=true;S.set=false;S.info=null;upFiles=[]}
+else if(a==='up'){if($('#msg').classList.contains('stay'))$('#msg').hidden=true;S.up=true;S.set=false;S.info=null;upFiles=[]}
 else if(a==='set'){S.set=!S.set;S.up=false;S.info=null;S.cfm='';if(S.set)storageInfo().then(render)}
 else if(a==='close'){S.up=false;S.set=false;S.info=null;S.cfm=''}
 else if(a==='csv')return csvSave();
@@ -895,6 +905,7 @@ else if(a==='dhist'){if(S.cfm!=='hist'){S.cfm='hist'}else{S.cfm='';p.log=[];S.sn
 else if(a==='dmarks'){if(S.cfm!=='marks'){S.cfm='marks'}else{S.cfm='';const old=Object.keys(p.meta).filter(u=>st(p.meta[u])&&!sk(p.meta[u])).map(u=>[u,st(p.meta[u])]),nS=Object.keys(p.meta).filter(u=>sk(p.meta[u])).length;
 setStatus(p,old.map(x=>x[0]),'');say('All marks cleared'+(nS?' · '+nS+' super kept left alone':''),()=>{['k','r','d'].forEach(v=>setStatus(p,old.filter(x=>x[1]===v).map(x=>x[0]),v));render()})}}
 else if(a==='dprof'){if(S.cfm!=='prof'){S.cfm='prof'}else{S.cfm='';return delProfile(p.name).then(render)}}
+else if(a==='msgx'){clearTimeout(mt);$('#msg').hidden=true;undoFn=null}
 else if(a==='undo'){const f=undoFn;undoFn=null;clearTimeout(mt);$('#msg').hidden=true;if(f)f()}
 else if(a==='go')return doImport();
 else if(a==='more')S.n+=200;
