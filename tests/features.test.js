@@ -50,8 +50,9 @@ module.exports = {
     await mark(page, 'carol', 'r');
     let m = await meta(page, 'alice');
     assert.strictEqual(m.s, 'k'); assert.strictEqual(m.sk, 1);
-    // Status filters: Kept includes super kept, Super kept is only those.
-    assert.deepStrictEqual(await page.evaluate(() => { S.f.st = ['k']; return view(); }), ['alice']);
+    // Status filters are separate: Kept is plain keeps only, Super kept is only those.
+    assert.deepStrictEqual(await page.evaluate(() => { S.f.st = ['k']; return view(); }), []);
+    assert.deepStrictEqual(await page.evaluate(() => { S.f.st = ['k', 'K']; return view(); }), ['alice']);
     assert.deepStrictEqual(await page.evaluate(() => { S.f.st = ['K']; const v = view(); S.f.st = []; return v; }), ['alice']);
     // A quick tap in the list doesn't undo it.
     await page.click('[data-a=mr][data-u="alice"]');
@@ -204,6 +205,37 @@ module.exports = {
     assert.strictEqual(await page.isVisible('#msg'), false);
     // Short messages still go away on their own.
     await mark(page, 'alice', 'k');
+    await context.close();
+  },
+  async 'a super keep reads as kept everywhere'(browser) {
+    const { context, page } = await openDevice(browser);
+    await importExport(page, { profile: 'me', fing: FING, fers: FERS });
+    await openChecker(page, []);
+    await page.click('[data-a=ckm]'); await page.click('.kmenu [data-k=K]'); await after(page);
+    await page.click('[data-a=back]').catch(() => page.evaluate(() => ckAct('back')));
+    await page.evaluate(() => ckAct('back')); await after(page);
+    assert.ok(/^Kept/.test(await page.textContent('#kc button.tag')), await page.textContent('#kc button.tag'));
+    await page.click('[data-a=ckclose]');
+    assert.ok(await page.$('[data-a=mk][data-u="alice"].on2'), 'Keep button shows as on');
+    assert.ok(await page.$('.r.sk .uc a[href*="alice"]'), 'row shows as kept');
+    assert.strictEqual(await page.evaluate(() => { const v = cp().meta.alice; return st(v); }), 'k');
+    await context.close();
+  },
+  async 'tapping Keep on a super kept account keeps the star'(browser) {
+    const { context, page } = await openDevice(browser);
+    await importExport(page, { profile: 'me', fing: FING, fers: FERS });
+    await openChecker(page, []);
+    await page.click('[data-a=ckm]'); await page.click('.kmenu [data-k=K]'); await after(page);
+    await page.evaluate(() => ckAct('back')); await after(page);
+    await page.click('#ck [data-a=ck][data-k=k]'); await after(page);
+    assert.strictEqual((await meta(page, 'alice')).sk, 1);
+    await page.click('[data-a=ckclose]');
+    await page.evaluate(() => { S.info = 'alice'; render(); });
+    await page.click('#modal [data-a=mk]');
+    assert.strictEqual((await meta(page, 'alice')).sk, 1, 'details Keep leaves it too');
+    await page.click('#modal [data-a=msk]');
+    const m = await meta(page, 'alice');
+    assert.ok(!m.sk && !m.s, 'the star button is how you take it off');
     await context.close();
   },
 };
