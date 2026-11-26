@@ -179,4 +179,31 @@ module.exports = {
     assert.strictEqual(await page.evaluate(() => localStorage.getItem('ig_idx')), JSON.stringify(['real']));
     await context.close();
   },
+  async 'unfollowing someone who does not follow you keeps the mark and is not logged as a reset'(browser) {
+    const { context, page } = await openDevice(browser);
+    // alice: unfollower (you unfollow her) · carol: unfollower who follows back later · bob: mutual you unfollow
+    await importExport(page, { profile: 'me', fing: FING, fers: FERS, date: '2026-11-01' });
+    await mark(page, 'alice', 'r'); await mark(page, 'carol', 'r');
+    await page.click('[data-a=tab][data-t=fb]'); await mark(page, 'bob', 'k');
+    await importExport(page, { profile: 'me', fing: { carol: T + 20 }, fers: { bob: T + 15, dave: T + 25, carol: T + 40 }, date: '2026-11-15' });
+    const g = await page.evaluate(() => S.P.me.log[0]);
+    assert.deepStrictEqual(g.fr.sort(), ['alice', 'bob']);
+    // carol followed back and bob still follows you after you unfollowed him: both need a look.
+    assert.deepStrictEqual(g.rs.sort(), ['bob', 'carol']);
+    assert.deepStrictEqual(await marks(page, 'me'), { alice: 'r' });
+    assert.strictEqual((await meta(page, 'alice')).s, 'r', 'mark kept');
+    await context.close();
+  },
+  async 'the import message stays until you close it'(browser) {
+    const { context, page } = await openDevice(browser);
+    await importExport(page, { profile: 'me', fing: FING, fers: FERS });
+    await page.waitForTimeout(4500);
+    assert.strictEqual(await page.isVisible('#msg'), true);
+    assert.ok(/Imported the/.test(await page.textContent('#msg')));
+    await page.click('#msg [data-a=msgx]');
+    assert.strictEqual(await page.isVisible('#msg'), false);
+    // Short messages still go away on their own.
+    await mark(page, 'alice', 'k');
+    await context.close();
+  },
 };
