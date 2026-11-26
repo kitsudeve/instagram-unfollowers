@@ -206,4 +206,18 @@ module.exports = {
     await mark(page, 'alice', 'k');
     await context.close();
   },
+  async 'a super keep reads as kept everywhere'(browser) {
+    const { context, page } = await openDevice(browser);
+    await importExport(page, { profile: 'me', fing: FING, fers: FERS });
+    await openChecker(page, []);
+    await page.click('[data-a=ckm]'); await page.click('.kmenu [data-k=K]'); await after(page);
+    await page.click('[data-a=back]').catch(() => page.evaluate(() => ckAct('back')));
+    await page.evaluate(() => ckAct('back')); await after(page);
+    assert.ok(/^Kept/.test(await page.textContent('#kc button.tag')), await page.textContent('#kc button.tag'));
+    await page.click('[data-a=ckclose]');
+    assert.ok(await page.$('[data-a=mk][data-u="alice"].on2'), 'Keep button shows as on');
+    assert.ok(await page.$('.r.sk .uc a[href*="alice"]'), 'row shows as kept');
+    assert.strictEqual(await page.evaluate(() => { const v = cp().meta.alice; return st(v); }), 'k');
+    await context.close();
+  },
 };
