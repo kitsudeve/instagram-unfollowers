@@ -242,6 +242,7 @@ log:[{d:'2026-11-18',pd:'2026-10-21',ga:['nasa','taylorswift'],gr:['oldfriend_99
 {d:'2026-10-21',pd:'2026-08-02',ga:['dualipa','harrystyles','spotify'],gr:['anon_user'],grT:{anon_user:1690000000},fa:['nike','therock'],fr:['randomguy_7'],frT:{randomguy_7:1660000000}}]};
 let t=Date.now()/1000-2.4e8;
 a.forEach(u=>p.fing[u]=t+=4e6);b.forEach(u=>{p.fing[u]=t+=4e6;p.fers[u]=t+=25e5});c.forEach(u=>p.fers[u]=t+=35e5);
+p.fl=Object.assign(emptyFl(),{cf:{taylorswift:1},pend:{zendaya_fan:Date.now()/1000-40*86400,'cozy.cafe':Date.now()/1000-9*86400},bl:{spam_bot_42:Date.now()/1000-300*86400,'giveaway.winner.dm':Date.now()/1000-20*86400}});
 p.fing.cristiano=Date.now()/1000-1.9e8;p.fers.mrbeast=Date.now()/1000-12*86400;p.fers.sza=Date.now()/1000-70*86400;
 return p})();
 S.P.example_user=EX;
@@ -285,6 +286,9 @@ k2=(/^y/.test(S.sort)&&S.tab!=='fb')?'az':S.sort;
 return a.sort(c[k2]||c.az)}
 
 /* ---------- storage ---------- */
+/* Development copy (the Claude test mirror sets window.UC_DEV): only the example
+   profile, nothing read from or written to storage, so real data is never touched. */
+const DEV=window.UC_DEV===true;
 let coll=null,mt,persist='checking';
 const dataKB=()=>{let b=0;Object.keys(S.P).forEach(k=>{if(!S.P[k].demo)b+=JSON.stringify(S.P[k]).length});return Math.round(b/1024)};
 async function storageInfo(){try{if(!navigator.storage||!navigator.storage.persist)return persist='unknown';
@@ -312,7 +316,7 @@ timers[n]=setTimeout(()=>{delete timers[n];save(n,dirty[n]===2)},400)};
 /* Returns false when the browser refused to store the data (storage full,
    private browsing, site data blocked). Without a Claude account the browser
    is the only copy, so save() turns that into a visible error. */
-function writeLocal(n,full){const p=S.P[n];if(!p||p.demo)return true;
+function writeLocal(n,full){const p=S.P[n];if(!p||p.demo||DEV)return true;
 try{localStorage.setItem('igm_'+n,JSON.stringify(p.meta||{}));
 if(full){localStorage.setItem('ig_'+n,JSON.stringify(lists(p)));localStorage.setItem('ig_idx',JSON.stringify(mine()))}return true}catch(e){return false}}
 const LOCAL_FAIL='this browser wouldn’t store it. Its storage may be full, or it may be in private browsing';
@@ -328,7 +332,7 @@ del=Object.assign({},o.del||{},idxDel);
 mine().forEach(k=>{if(del[k]&&(S.P[k].sa||0)>del[k])delete del[k]});
 const names=[...new Set((o.n||[]).concat(mine()))].filter(k=>S.P[k]&&!S.P[k].demo?!(del[k]&&del[k]>=(S.P[k].sa||0)):!del[k]);
 idxDel=del;await coll.doc('index').set({n:names,del})}
-async function save(n,full){const p=S.P[n];if(!p||p.demo){delete dirty[n];return}
+async function save(n,full){const p=S.P[n];if(!p||p.demo||DEV){delete dirty[n];return}
 if(!ready){dirty[n]=full?2:(dirty[n]||1);return}
 const was=dirty[n];
 try{
@@ -363,6 +367,7 @@ const lm=parseMeta(localStorage.getItem('igm_'+n));
 if(lm){meta=mergeMeta(meta,lm);if(coll&&!push&&JSON.stringify(meta)!==JSON.stringify(dbm||{}))push=1}
 base.meta=meta;return{p:base,push}}
 async function load(){let ns=[];const push={};
+if(DEV){ready=true;persist='yes';render();return}
 try{const loc=parseJ(localStorage.getItem('ig_idx'))||[];
 if(coll){const i=await coll.doc('index').get(),o=i.exists?i.data()||{}:{};idxDel=o.del||{};
 ns=[...new Set((o.n||[]).concat(loc))]}
@@ -602,7 +607,7 @@ $('#hd').innerHTML='<span class="logo">Unfollower Checker</span>'
 $('#st').innerHTML=[[F,'Following'],[R,'Followers']].map((x,i)=>{const d=hasPv?x[0]-(i?Object.keys(pv.fers).length:Object.keys(pv.fing).length):0;
 return '<div class="cd"><b>'+x[0]+'</b><span class="mu">'+x[1]+'</span>'+(hasPv?'<i class="'+(d>0?'up':d<0?'dn':'fl')+'">'+(d>0?'▲ +'+d:d<0?'▼ '+d:'– 0')+'</i>':'')+'</div>'}).join('');
 
-$('#hb').innerHTML=moveBanner()+(!mvState&&needBk()?'<div class="hist" id="bkr" style="flex-wrap:wrap"><span style="flex:1 1 220px">Your data is only saved in this browser, which can clear it (Safari does after 7 days without a visit). '+(lastBk()?'Your last backup was '+rel(lastBk()/1000).toLowerCase()+'.':'You haven’t downloaded a backup yet.')+'</span><button data-a="bkup">Download backup</button><button data-a="bklater" class="gh" style="background:none">Later</button></div>':'')+(saveErr?'<div class="hist" style="background:#ff4d4f14;border-color:#ff4d4f44;color:#ffb3b4"><span>Your last change couldn’t be saved: '+esc(saveErr)+'. Download a backup from Settings so you don’t lose it.</span><button data-a="set" style="background:#ff4d4f22;color:#ffb3b4">Settings</button></div>':'')+(ed?'':'<div class="hist"><span>Viewing your data as it was on '+D2(snapDate(p))+'. Checking and uploading are off while you look back.</span><button data-a="latest">Back to latest</button></div>');
+$('#hb').innerHTML=(DEV?'<div class="hist"><span>Development copy: only the example profile, and nothing you do here is saved. Your real data is in the live app.</span></div>':'')+moveBanner()+(!mvState&&needBk()?'<div class="hist" id="bkr" style="flex-wrap:wrap"><span style="flex:1 1 220px">Your data is only saved in this browser, which can clear it (Safari does after 7 days without a visit). '+(lastBk()?'Your last backup was '+rel(lastBk()/1000).toLowerCase()+'.':'You haven’t downloaded a backup yet.')+'</span><button data-a="bkup">Download backup</button><button data-a="bklater" class="gh" style="background:none">Later</button></div>':'')+(saveErr?'<div class="hist" style="background:#ff4d4f14;border-color:#ff4d4f44;color:#ffb3b4"><span>Your last change couldn’t be saved: '+esc(saveErr)+'. Download a backup from Settings so you don’t lose it.</span><button data-a="set" style="background:#ff4d4f22;color:#ffb3b4">Settings</button></div>':'')+(ed?'':'<div class="hist"><span>Viewing your data as it was on '+D2(snapDate(p))+'. Checking and uploading are off while you look back.</span><button data-a="latest">Back to latest</button></div>');
 
 if(S.cks.scope==='pend'&&!l.pend.length)S.cks.scope='nofb';
 const scope=(CKS.find(x=>x[0]===S.cks.scope)||CKS[0])[1],unc=(l[S.cks.scope]||[]).filter(u=>!st(p.meta[u]||{})&&!u.startsWith('__deleted__')).length;
@@ -610,7 +615,7 @@ $('#ckb').innerHTML='<span>✓</span> Check '+scope+(unc?' <span class="mu" styl
 $('#ckb').disabled=!unc||!ed;
 
 $('#tb').innerHTML=[['nofb','Unfollowers',l.nofb.length],['fb','Mutuals',l.fb.length],['fans','Fans',l.fans.length]]
-.concat(l.pend.length?[['pend','Requests',l.pend.length]]:[]).concat(l.bl.length?[['bl','Blocked',l.bl.length]]:[]).concat([['chg','Changes',''],['ins','Insights','']])
+.concat([['pend','Requests',l.pend.length],['bl','Blocked',l.bl.length]]).concat([['chg','Changes',''],['ins','Insights','']])
 .map(x=>'<button data-a="tab" data-t="'+x[0]+'" class="'+(S.tab===x[0]?'on':'')+'">'+x[1]+(x[2]!==''?'<span class="n">'+x[2]+'</span>':'')+'</button>').join('');
 $('#bar').hidden=lt;
 
@@ -634,7 +639,7 @@ h=(S.tab==='pend'?'<p class="mu" style="margin:14px 0 0;font-size:13px">Follow r
 +(chips.length?'<div class="chips">'+chips.join('')+'<button class="gh" data-a="fclr" style="padding:4px 11px;font-size:12px">Clear all</button></div>':'')
 +(selV.length?'<div class="bulk"><b>'+selV.length+' selected</b><button data-a="bk">✓ Keep</button><button data-a="br">✕ Remove</button><button class="gh" data-a="bu">Clear status</button><button class="gh" data-a="bn">Deselect</button></div>':'')
 +'<div class="h">'+(ed?'<input type="checkbox" data-all="1" data-fid="all" aria-label="Select all" '+(v.length&&selV.length===v.length?'checked':'')+'>':'')+'<span>Username</span>'+C.map(c=>'<span>'+c[0]+'</span>').join('')+(ed?'<span></span>':'')+'</div>'
-+(v.length?shown.map((u,i)=>row(u,p,C,i,ed)).join(''):'<div class="empty"><b>Nothing here</b>'+(q0()?'No usernames match your search.':nF(S.f)?'No accounts match these filters.':S.tab==='pend'?'No pending follow requests in your export.':bt?'No blocked accounts in your export.':'This list is empty.')+'</div>')
++(v.length?shown.map((u,i)=>row(u,p,C,i,ed)).join(''):'<div class="empty"><b>Nothing here</b>'+(q0()?'No usernames match your search.':nF(S.f)?'No accounts match these filters.':S.tab==='pend'?'No pending follow requests in this profile’s data. If you have some, upload your whole Instagram zip to bring them in.':bt?'No blocked accounts in this profile’s data. If you have some, upload your whole Instagram zip to bring them in.':'This list is empty.')+'</div>')
 +'</div>'
 +(v.length>S.n?'<div class="pg"><button class="gh" data-a="more">Show '+Math.min(200,v.length-S.n)+' more · '+(v.length-S.n)+' hidden</button></div>':'')}
 $('#list').className=(S.tab!==lastTab?'fade':'');lastTab=S.tab;
@@ -982,5 +987,5 @@ $('#q').addEventListener('input',()=>{S.n=200;render()});
 $('#modal').addEventListener('click',e=>{if(e.target.id==='modal'){S.rst=null;S.up=false;S.set=false;S.info=null;S.cfm='';render()}});
 
 render();
-(async()=>{await storageInfo();try{if(window.claude){const r=await Promise.all([claude.use('user'),claude.use('db')]);if(r[0]&&r[1])coll=r[1].collection('data/users/'+await r[0].id())}}catch(e){}load()})();
+(async()=>{await storageInfo();try{if(window.claude&&!DEV){const r=await Promise.all([claude.use('user'),claude.use('db')]);if(r[0]&&r[1])coll=r[1].collection('data/users/'+await r[0].id())}}catch(e){}load()})();
 </script></body></html>

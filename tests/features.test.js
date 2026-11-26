@@ -150,4 +150,33 @@ module.exports = {
     assert.ok(await page.$('[data-a=mk][data-u="alice"].on2'));
     await context.close();
   },
+  async 'Requests and Blocked tabs always show, with a hint when empty'(browser) {
+    const { context, page } = await openDevice(browser);
+    await importExport(page, { profile: 'me', fing: FING, fers: FERS });
+    const tabs = await page.$$eval('#tb button', bs => bs.map(b => b.dataset.t));
+    assert.ok(tabs.includes('pend') && tabs.includes('bl'), tabs.join());
+    await page.click('[data-a=tab][data-t=bl]');
+    assert.ok(/whole Instagram zip/.test(await page.textContent('#list .empty')));
+    await context.close();
+  },
+  async 'development copy shows only the example profile and saves nothing'(browser) {
+    const context = await browser.newContext();
+    await context.addInitScript(() => {
+      window.UC_DEV = true;
+      if (!sessionStorage.getItem('seeded')) {
+        sessionStorage.setItem('seeded', '1');
+        localStorage.setItem('ig_idx', JSON.stringify(['real']));
+        localStorage.setItem('ig_real', JSON.stringify({ name: 'real', date: '2026-11-01', fing: { x: 1 }, fers: {}, log: [], sa: 1 }));
+      }
+    });
+    const { page } = await openDevice(browser, null, context);
+    assert.deepStrictEqual(await page.evaluate(() => Object.keys(S.P)), ['example_user']);
+    assert.ok(/Development copy/.test(await page.textContent('#hb')));
+    await importExport(page, { profile: 'test', fing: FING, fers: FERS });
+    await mark(page, 'alice', 'k'); await settle(page);
+    const keys = await page.evaluate(() => Object.keys(localStorage).sort());
+    assert.deepStrictEqual(keys, ['ig_idx', 'ig_real'], 'nothing new written');
+    assert.strictEqual(await page.evaluate(() => localStorage.getItem('ig_idx')), JSON.stringify(['real']));
+    await context.close();
+  },
 };
