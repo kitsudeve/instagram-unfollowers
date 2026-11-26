@@ -66,7 +66,7 @@ input[type=checkbox]:checked::after{content:"";position:absolute;left:5px;top:1.
 .r.on{background:#0095f60f}
 .uc{display:flex;align-items:center;gap:7px;min-width:0}
 .uc a{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14.5px}
-.bdg{font-size:10.5px;font-weight:600;border-radius:5px;padding:2px 6px;white-space:nowrap;flex:none}
+.bdg{font-size:10.5px;font-weight:600;border-radius:5px;padding:2px 6px;white-space:nowrap;flex:none}.bdg.bi{display:inline-flex;align-items:center;gap:4px}.bdg svg{display:block;flex:none}
 .kbd{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin:-6px 0 14px}
 .sk .uc a{color:var(--gn)}.sr2 .uc a{color:var(--rd)}
 .dts{display:contents}
@@ -207,8 +207,17 @@ const SRCH='<svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true" f
 const INF='<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="#0095f6" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 7.6v.4"/></svg>';
 
 const XF=[['close_friends','cf'],['blocked','bl'],['pending_follow_requests','pend'],['recent_follow_requests','req'],['recently_unfollowed','unf'],['favorit','fav']];
-const BDG={cf:['Close friend','#feda75','#3a2f10'],fav:['Favourite','#f08ac0','#3a1228'],bl:['Blocked','#ff8e8f','#3a1515'],pend:['Request pending','#7cc5ff','#10283a'],req:['Requested','#7cc5ff','#10283a'],unf:['Recently unfollowed','#bdbdbd','#242424']};
+const BDG={cf:['Close friend','#7fe0a3','#123d24'],fav:['Favourite','#8fcfff','#10283a'],bl:['Blocked','#ff8e8f','#3a1515'],pend:['Request pending','#7cc5ff','#10283a'],req:['Requested','#7cc5ff','#10283a'],unf:['Recently unfollowed','#bdbdbd','#242424']};
 const FKEYS=['cf','fav','pend','req','unf','bl'];
+/* Our own simple icons in the spirit of Instagram's: a green circle with a star for close friends, a blue star for favourites. */
+const STARP='M12 2.6l2.8 5.9 6.5.9-4.7 4.5 1.1 6.4L12 17.3l-5.8 3 1.1-6.4-4.7-4.5 6.5-.9z';
+const BICO={cf:'<svg viewBox="0 0 24 24" width="12" height="12" aria-hidden="true"><circle cx="12" cy="12" r="12" fill="#1ebe5d"/><path d="'+STARP+'" fill="#fff" transform="translate(3.6 3.4) scale(.7)"/></svg>',fav:'<svg viewBox="0 0 24 24" width="12" height="12" aria-hidden="true"><path d="'+STARP+'" fill="#5cb8ff"/></svg>'};
+const bdgH=k=>'<span class="bdg'+(BICO[k]?' bi':'')+'" style="color:'+BDG[k][1]+';background:'+BDG[k][2]+'">'+(BICO[k]||'')+BDG[k][0]+'</span>';
+const TNOTE={nofb:'Accounts you follow that don’t follow you back. Mark each one <b>Keep</b> or <b>Remove</b>, then unfollow the ones you removed on Instagram.',
+fb:'Accounts you follow that follow you back.',
+fans:'Accounts that follow you that you don’t follow back. Open a profile to follow them back.',
+pend:'Follow requests you sent that haven’t been accepted. Open a profile and tap <b>Requested</b> to cancel it.',
+bl:'Accounts you’ve blocked. They aren’t in your followers or following, so they don’t show anywhere else. To unblock someone, open their profile on Instagram.'};
 const MNOTE='<p class="mu fnote">Marks don’t expire. One only goes back to unchecked if you clear it, or a newer export shows that person’s relationship with you has changed. Super kept accounts never reset.</p>';
 const FPL={cf:'Close friends',fav:'Favourites',pend:'Follow requests pending',req:'Recent follow requests',unf:'Recently unfollowed',bl:'Blocked accounts'};
 const emptyFl=()=>({cf:{},fav:{},pend:{},req:{},unf:{},bl:{}});
@@ -242,7 +251,8 @@ log:[{d:'2026-11-18',pd:'2026-10-21',ga:['nasa','taylorswift'],gr:['oldfriend_99
 {d:'2026-10-21',pd:'2026-08-02',ga:['dualipa','harrystyles','spotify'],gr:['anon_user'],grT:{anon_user:1690000000},fa:['nike','therock'],fr:['randomguy_7'],frT:{randomguy_7:1660000000}}]};
 let t=Date.now()/1000-2.4e8;
 a.forEach(u=>p.fing[u]=t+=4e6);b.forEach(u=>{p.fing[u]=t+=4e6;p.fers[u]=t+=25e5});c.forEach(u=>p.fers[u]=t+=35e5);
-p.fl=Object.assign(emptyFl(),{cf:{taylorswift:1},pend:{zendaya_fan:Date.now()/1000-40*86400,'cozy.cafe':Date.now()/1000-9*86400},bl:{spam_bot_42:Date.now()/1000-300*86400,'giveaway.winner.dm':Date.now()/1000-20*86400}});
+p.meta={nike:{s:'k',sk:1,t:Date.now()/1000-20*86400},natgeo:{s:'k',sk:1,t:Date.now()/1000-3*86400},spotify:{s:'k',sk:1,t:Date.now()/1000-45*86400}};
+p.fl=Object.assign(emptyFl(),{cf:{taylorswift:1,zendaya:1},fav:{nasa:1,arianagrande:1},pend:{zendaya_fan:Date.now()/1000-40*86400,'cozy.cafe':Date.now()/1000-9*86400},bl:{spam_bot_42:Date.now()/1000-300*86400,'giveaway.winner.dm':Date.now()/1000-20*86400}});
 p.fing.cristiano=Date.now()/1000-1.9e8;p.fers.mrbeast=Date.now()/1000-12*86400;p.fers.sza=Date.now()/1000-70*86400;
 return p})();
 S.P.example_user=EX;
@@ -629,8 +639,7 @@ FSEC.forEach(s=>S.f[s.k].forEach(o=>chips.push('<span class="chip">'+FLAB[s.k+':
 const sorts=SORTS.map(x=>[x[0],x[0]==='old'?dl+': oldest first':x[0]==='nw'?dl+': newest first':x[1]])
 .concat(S.tab==='fb'?[['yo','Followed you: oldest'],['yn','Followed you: newest']]:[]);
 if(bt)ed=false;
-h=(S.tab==='pend'?'<p class="mu" style="margin:14px 0 0;font-size:13px">Follow requests you sent that haven’t been accepted. Open a profile and tap <b>Requested</b> to cancel it.</p>':'')
-+(bt?'<p class="mu" style="margin:14px 0 0;font-size:13px">Accounts you’ve blocked. They aren’t in your followers or following, so they don’t show anywhere else. To unblock someone, open their profile on Instagram.</p>':'')
+h=(TNOTE[S.tab]?'<p class="mu" style="margin:14px 0 0;font-size:13px">'+TNOTE[S.tab]+'</p>':'')
 +'<div class="card" style="--cols:'+(ed?'30px ':'')+'minmax(0,1fr) '+'150px '.repeat(C.length)+(ed?'80px':'0px')+'">'
 +'<div class="sr"><span class="mu">'+v.length+(v.length===1?' account':' accounts')+(S.f.st.length||bt?'':' · '+v.filter(u=>!st(p.meta[u]||{})).length+' unchecked')+'</span>'
 +'<div class="sg"><button data-a="lf" class="ic'+(S.fo?' pr':'')+'" data-fid="lf" title="Filters" aria-label="Filters" aria-expanded="'+S.fo+'">'+FIC+(nF(S.f)?'<i class="dt"></i>':'')+'</button>'
@@ -661,7 +670,7 @@ return '<div class="r'+(s==='k'?' sk':s==='r'?' sr2':s==='d'?' sd':'')+(se?' on'
 +(ed?'<input type="checkbox" data-sel="'+esc(u)+'" data-i="'+i+'" data-fid="s'+esc(u)+'" aria-label="Select '+esc(u)+'" '+(se?'checked':'')+'>':'')
 +'<div class="uc">'+(dl?'<span class="mu" data-u="'+esc(u)+'">Deleted account</span>':'<a href="'+url(u)+'" target="_blank" rel="noopener noreferrer">'+esc(u)+'</a>')
 +(sup?'<span class="star" title="Super kept" aria-label="Super kept">★</span>':'')+(s==='d'?'<span class="bdg" style="color:#bdbdbd;background:#262626">Deactivated</span>':'')
-+flagsOf(p,u).filter(k=>!(k==='pend'&&S.tab==='pend')&&!(k==='bl'&&S.tab==='bl')).map(k=>'<span class="bdg" style="color:'+BDG[k][1]+';background:'+BDG[k][2]+'">'+BDG[k][0]+'</span>').join('')+'</div>'
++flagsOf(p,u).filter(k=>!(k==='pend'&&S.tab==='pend')&&!(k==='bl'&&S.tab==='bl')).map(k=>bdgH(k)).join('')+'</div>'
 +'<div class="dts">'+C.map(c=>{const t=c[1](u);return '<span class="dc" data-l="'+c[0]+'">'+(t?'<b>'+rel(t)+'</b><em>'+D(t)+'</em>':'<b class="mu">Unknown</b>')+'</span>'}).join('')+'</div>'
 +(ed?'<div class="acts"><button class="ab k'+(s==='k'?' on2':'')+'" data-a="mk" data-u="'+esc(u)+'" title="Keep" aria-label="Keep '+esc(u)+'" aria-pressed="'+(s==='k')+'">✓</button>'
 +'<button class="ab x'+(s==='r'?' on2':'')+'" data-a="mr" data-u="'+esc(u)+'" title="Remove" aria-label="Remove '+esc(u)+'" aria-pressed="'+(s==='r')+'">✕</button></div>':'')
@@ -817,7 +826,7 @@ if((g.fr||[]).indexOf(u)>=0)at('You unfollowed them');
 if((g.rs||[]).indexOf(u)>=0)at('Mark cleared, relationship had changed');
 (g.rn||[]).forEach(x=>{if(x[1]===u)at('Changed username from '+x[0]);if(x[0]===u)at('Changed username to '+x[1])})});
 return '<div class="mb"><h3 style="word-break:break-all;margin-bottom:10px">'+(dl?'Deleted account':esc(u))+'</h3>'
-+(fl.length?'<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">'+fl.map(k=>'<span class="bdg" style="color:'+BDG[k][1]+';background:'+BDG[k][2]+'">'+BDG[k][0]+'</span>').join('')+'</div>':'')
++(fl.length?'<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">'+fl.map(k=>bdgH(k)).join('')+'</div>':'')
 +row('Relationship',relTxt)
 +(fg?row('You followed',rel(fg)+' · '+D(fg)):'')
 +(fr?row('They followed you',rel(fr)+' · '+D(fr)):'')
@@ -868,7 +877,7 @@ el.innerHTML='<div class="kw">'+hd
 +(s?'<button role="menuitem" data-a="ckun">Unmark</button>':'')+'</div>':'')
 +(s?'<button class="tag '+stK(p.meta[u])+'" data-a="ckun" title="Tap to unmark" aria-label="'+SLAB[stK(p.meta[u])]+', tap to unmark">'+SLAB[stK(p.meta[u])]+' ✕</button>':'')
 +'<div class="kn">'+(dl?'Deleted account':'<a href="'+url(u)+'" target="_blank" rel="noopener noreferrer">'+esc(u)+'</a>')+'</div>'
-+(flagsOf(p,u).length?'<div class="kbd">'+flagsOf(p,u).map(k=>'<span class="bdg" style="color:'+BDG[k][1]+';background:'+BDG[k][2]+'">'+BDG[k][0]+'</span>').join('')+'</div>':'')
++(flagsOf(p,u).length?'<div class="kbd">'+flagsOf(p,u).map(k=>bdgH(k)).join('')+'</div>':'')
 +(dl?'<p class="mu" style="margin:0 0 14px">This account no longer exists.</p>':'')
 +kd('Relationship',rel2)+(pt?kd('Requested',rel(pt)+' · '+D(pt)):'')+(fg?kd('You followed',rel(fg)+' · '+D(fg)):'')+(fr?kd('Followed you',rel(fr)+' · '+D(fr)):'')
 +'</div>'
