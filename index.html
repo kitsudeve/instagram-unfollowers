@@ -833,9 +833,11 @@ return (k.scope==='all'?['nofb','fb','fans']:[k.scope]).flatMap(g=>{
 const a=(G[g]||[]).filter(u=>(keepDel||!u.startsWith('__deleted__'))&&match(u,tf(u),k,p.meta[u]||{},now,p.fl));
 return k.sort==='shuffle'?sh(a):a.sort(cmp[k.sort]||cmp.az)})}
 function ckRebuild(){S.ck={q:qb(cp()),i:0};ckRender()}
-function ckOpen(){ckRebuild()}
+/* The checker opens with the tabs' filters. With none set it starts on Unchecked (only in the checker, until you change a filter there). */
+const ckDef=()=>{fsync(S.f);if(!nF(S.cks))S.cks.st=['u']};
+function ckOpen(){ckDef();ckRebuild()}
 function ckRender(){const c=S.ck,el=$('#ck');if(!c){el.hidden=true;el.innerHTML='';return}
-const p=cp(),e=ef(),u=c.q[c.i],k=S.cks,act=nF(k)>0||k.sort!=='shuffle',
+const p=cp(),e=ef(),u=c.q[c.i],k=S.cks,act=!(nF(k)===1&&k.st.length===1&&k.st[0]==='u')&&nF(k)>0||k.sort!=='shuffle',
 hd='<div class="kh"><select data-ck2="scope" aria-label="Group">'+ckScopes(p).map(x=>'<option value="'+x[0]+'" '+(k.scope===x[0]?'selected':'')+'>'+x[1]+'</option>').join('')+'</select>'
 +'<button data-a="ckf" class="ic'+(k.fo?' pr':'')+'" title="Filters and sort" aria-label="Filters and sort" aria-expanded="'+k.fo+'">'+FIC+(act?'<i class="dt"></i>':'')+'</button>'
 +(k.fo?'<div class="kfp"><div class="fg">'+FSEC.filter(x=>x.k!=='flg'||hasFl(p)).map(s=>'<div class="fs"><b>'+s.t+'</b>'
@@ -923,7 +925,7 @@ else if(a==='more')S.n+=200;
 else if(a==='lf')S.fo=!S.fo;
 else if(a==='fclr'){S.f=FRESH();fsync(S.f);S.n=200}
 else if(a==='unf'){const k=b.dataset.k;S.f[k]=S.f[k].filter(x=>x!==b.dataset.v);fsync(S.f);S.n=200}
-else if(a==='kclr'){S.cks=Object.assign(FRESH(),{scope:S.cks.scope,sort:'shuffle',fo:S.cks.fo});fsync(S.cks);return ckRebuild()}
+else if(a==='kclr'){S.cks=Object.assign(FRESH(),{scope:S.cks.scope,sort:'shuffle',fo:S.cks.fo});fsync(S.cks);ckDef();return ckRebuild()}
 else if(a==='latest'){S.snap=-1;S.sel.clear()}
 else if(a==='hall'){const vis=p.log.slice(S.snap+1),all=vis.every(g=>S.hid[ck(g)]);vis.forEach(g=>S.hid[ck(g)]=!all)}
 else if(a==='mk'||a==='mr'){const u=b.dataset.u,cur=st(p.meta[u]||{}),v=a==='mk'?'k':'r';

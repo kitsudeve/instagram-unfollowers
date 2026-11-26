@@ -9,9 +9,9 @@ const FERS = { bob: T + 15, dave: T + 25 };
 const meta = (page, u) => page.evaluate(u => Object.assign({}, S.P.me.meta[u]), u);
 // Open the checker on one account (alphabetical order, everything in the group).
 async function openChecker(page, st) {
-  await page.evaluate(st => { S.cks.sort = 'az'; S.cks.st = st; }, st || []);
   await page.click('[data-a=check]').catch(() => page.evaluate(() => ckOpen()));
   await page.evaluate(() => ckOpen());
+  await page.evaluate(st => { S.cks.sort = 'az'; S.cks.st = st; ckRebuild(); }, st || []);
   await page.waitForSelector('#kc');
 }
 const cardName = page => page.textContent('#kc .kn');
@@ -311,6 +311,20 @@ module.exports = {
     assert.strictEqual(await page.$('.kfp'), null, 'Done closes the filters');
     await page.click('[data-a=ckclose]');
     assert.deepStrictEqual(await page.evaluate(() => [S.f.st, S.f.usr]), [['u'], ['digits']], 'checker filter shows in the tabs');
+    await context.close();
+  },
+  async 'the checker starts on Unchecked when the tabs have no filters'(browser) {
+    const { context, page } = await openDevice(browser);
+    await importExport(page, { profile: 'me', fing: FING, fers: FERS });
+    await mark(page, 'alice', 'k');
+    await page.evaluate(() => ckOpen());
+    assert.deepStrictEqual(await page.evaluate(() => S.cks.st), ['u']);
+    assert.ok(!(await page.evaluate(() => S.ck.q)).includes('alice'), 'kept account not in the queue');
+    await page.evaluate(() => { S.ck = null; render(); });
+    assert.deepStrictEqual(await page.evaluate(() => S.f.st), [], 'tabs stay unfiltered');
+    // With a tab filter set, the checker uses that instead.
+    await page.evaluate(() => { S.f.usr = ['digits']; ckOpen(); });
+    assert.deepStrictEqual(await page.evaluate(() => [S.cks.st, S.cks.usr]), [[], ['digits']]);
     await context.close();
   },
 };
