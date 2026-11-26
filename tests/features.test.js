@@ -327,4 +327,28 @@ module.exports = {
     assert.deepStrictEqual(await page.evaluate(() => [S.cks.st, S.cks.usr]), [[], ['digits']]);
     await context.close();
   },
+  async 'a deactivated mark is cleared when the account comes back in a later export'(browser) {
+    const { context, page } = await openDevice(browser);
+    // alice is an unfollower, eve is a mutual. Both marked as not existing.
+    await importExport(page, { profile: 'me', fing: { alice: T, eve: T + 1 }, fers: { eve: T + 2 }, date: '2026-11-01' });
+    await page.evaluate(() => { setStatus(cp(), ['alice', 'eve'], 'd'); });
+    // Next export: both gone (deactivated accounts drop out). The mark stays.
+    await importExport(page, { profile: 'me', fing: { bob: T + 3 }, fers: { bob: T + 4 }, date: '2026-11-10' });
+    assert.strictEqual((await meta(page, 'alice')).s, 'd');
+    assert.strictEqual((await meta(page, 'eve')).s, 'd');
+    // They reactivate and are back in the export: the tag is removed and the reset is logged.
+    await importExport(page, { profile: 'me', fing: { alice: T, eve: T + 1, bob: T + 3 }, fers: { eve: T + 2, bob: T + 4 }, date: '2026-11-20' });
+    assert.strictEqual((await meta(page, 'alice')).s, '');
+    assert.strictEqual((await meta(page, 'eve')).s, '');
+    assert.deepStrictEqual((await page.evaluate(() => S.P.me.log[0].rs)).sort(), ['alice', 'eve']);
+    await context.close();
+  },
+  async 'a deactivated mark stays while the export shows no change for that account'(browser) {
+    const { context, page } = await openDevice(browser);
+    await importExport(page, { profile: 'me', fing: { alice: T }, fers: {}, date: '2026-11-01' });
+    await page.evaluate(() => { setStatus(cp(), ['alice'], 'd'); });
+    await importExport(page, { profile: 'me', fing: { alice: T }, fers: {}, date: '2026-11-10' });
+    assert.strictEqual((await meta(page, 'alice')).s, 'd');
+    await context.close();
+  },
 };
