@@ -283,7 +283,7 @@ usr:{digits:/\d/.test(u),sym:/[._]/.test(u),long:u.length>15,del:u.startsWith('_
 flg:FKEYS.reduce((a,k)=>{a[k]=!!((fl||{})[k]||{})[u];return a},{})});
 const flagsOf=(p,u)=>FKEYS.filter(k=>((p.fl||{})[k]||{})[u]);
 const okF=(arr,map)=>!arr.length||arr.some(v=>map[v]);
-function match(u,ts,f,m,now,fl){if(f.st.length&&!f.st.includes(st(m||{})||'u')&&!(sk(m)&&f.st.includes('K')))return false;
+function match(u,ts,f,m,now,fl){if(f.st.length&&!f.st.includes(stK(m||{})||'u'))return false;
 const T=tests(u,ts,now,fl,m);if(!ts&&f.dat.length)return false;
 return okF(f.dat,T.dat)&&okF(f.usr,T.usr)&&okF(f.flg||[],T.flg)&&okF(f.chk||[],T.chk)}
 

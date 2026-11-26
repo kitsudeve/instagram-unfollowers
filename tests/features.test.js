@@ -50,8 +50,9 @@ module.exports = {
     await mark(page, 'carol', 'r');
     let m = await meta(page, 'alice');
     assert.strictEqual(m.s, 'k'); assert.strictEqual(m.sk, 1);
-    // Status filters: Kept includes super kept, Super kept is only those.
-    assert.deepStrictEqual(await page.evaluate(() => { S.f.st = ['k']; return view(); }), ['alice']);
+    // Status filters are separate: Kept is plain keeps only, Super kept is only those.
+    assert.deepStrictEqual(await page.evaluate(() => { S.f.st = ['k']; return view(); }), []);
+    assert.deepStrictEqual(await page.evaluate(() => { S.f.st = ['k', 'K']; return view(); }), ['alice']);
     assert.deepStrictEqual(await page.evaluate(() => { S.f.st = ['K']; const v = view(); S.f.st = []; return v; }), ['alice']);
     // A quick tap in the list doesn't undo it.
     await page.click('[data-a=mr][data-u="alice"]');
