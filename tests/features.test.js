@@ -220,4 +220,21 @@ module.exports = {
     assert.strictEqual(await page.evaluate(() => { const v = cp().meta.alice; return st(v); }), 'k');
     await context.close();
   },
+  async 'tapping Keep on a super kept account keeps the star'(browser) {
+    const { context, page } = await openDevice(browser);
+    await importExport(page, { profile: 'me', fing: FING, fers: FERS });
+    await openChecker(page, []);
+    await page.click('[data-a=ckm]'); await page.click('.kmenu [data-k=K]'); await after(page);
+    await page.evaluate(() => ckAct('back')); await after(page);
+    await page.click('#ck [data-a=ck][data-k=k]'); await after(page);
+    assert.strictEqual((await meta(page, 'alice')).sk, 1);
+    await page.click('[data-a=ckclose]');
+    await page.evaluate(() => { S.info = 'alice'; render(); });
+    await page.click('#modal [data-a=mk]');
+    assert.strictEqual((await meta(page, 'alice')).sk, 1, 'details Keep leaves it too');
+    await page.click('#modal [data-a=msk]');
+    const m = await meta(page, 'alice');
+    assert.ok(!m.sk && !m.s, 'the star button is how you take it off');
+    await context.close();
+  },
 };

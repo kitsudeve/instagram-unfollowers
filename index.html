@@ -868,7 +868,8 @@ c.menu=false;
 if(k==='back'){if(c.i>0){c.i--;ckRender()}return}
 const p=cp(),u=c.q[c.i];if(u===undefined||c.busy)return;c.busy=1;
 const kc=$('#kc');if(kc&&kc.classList)kc.classList.add({k:'fk',K:'fk',r:'fr',skip:'fs',d:'fs'}[k]);
-setTimeout(()=>{c.busy=0;if(k!=='skip'){setStatus(p,[u],k)}c.i++;ckRender();render()},200)}
+/* Keep on a super kept account leaves the star on: it's already kept. */
+setTimeout(()=>{c.busy=0;if(k!=='skip'&&!(k==='k'&&sk(p.meta[u]))){setStatus(p,[u],k)}c.i++;ckRender();render()},200)}
 function ckUnmark(){const c=S.ck;if(!c)return;const p=cp(),u=c.q[c.i];c.menu=false;if(u===undefined){ckRender();return}
 const was=stK(p.meta[u]||{});if(!was){ckRender();return}
 setStatus(p,[u],'');ckRender();render();
@@ -918,7 +919,7 @@ else if(a==='hall'){const vis=p.log.slice(S.snap+1),all=vis.every(g=>S.hid[ck(g)
 else if(a==='mk'||a==='mr'){const u=b.dataset.u,cur=st(p.meta[u]||{}),v=a==='mk'?'k':'r';
 /* A super keep is protected from quick taps in the list: change it from the account's details. */
 if(sk(p.meta[u])&&!b.closest('#modal')){say('@'+u+' is super kept. Open the account to change it.')}
-else setStatus(p,[u],cur===v&&!sk(p.meta[u])?'':v)}
+else if(!(v==='k'&&sk(p.meta[u])))setStatus(p,[u],cur===v?'':v)}
 else if(a==='msk'||a==='mdd'){const u=b.dataset.u,m=p.meta[u]||{},v=a==='msk'?'K':'d',on=a==='msk'?sk(m):st(m)==='d';setStatus(p,[u],on?'':v)}
 else if(a==='bk'||a==='br'||a==='bu'){const vis=new Set(view()),sel=[...S.sel].filter(u=>vis.has(u)),us=sel.filter(u=>!sk(p.meta[u])),nS=sel.length-us.length,was=us.map(u=>[u,stK(p.meta[u]||{})]);
 if(!us.length){S.sel.clear();if(nS)say(nS===1?'That account is super kept, so it was left alone':'Those accounts are super kept, so they were left alone');render();return}
