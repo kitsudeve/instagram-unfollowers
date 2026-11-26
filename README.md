@@ -1,71 +1,98 @@
 # Unfollower Checker
 
-A single-page tool for working through your Instagram data export: who doesn't
-follow you back, who follows you that you don't follow, what changed between
-exports, and pending follow requests.
+See who doesn't follow you back on Instagram, using the data export Instagram
+gives you. No login, no third-party access to your account: the export is read
+in your browser and never uploaded.
 
-Your export is read in the browser. Nothing is uploaded anywhere.
+**[unfollower-checker-kitsudeve.vercel.app](https://unfollower-checker-kitsudeve.vercel.app)**
 
-## Using it
+![Unfollower Checker showing the example profile](docs/screenshot.png)
 
-1. In Instagram: **Settings and activity → Accounts Centre → Your information
-   and permissions → Export your information → Create export**.
+## Features
+
+- **Unfollowers, Mutuals and Fans.** Accounts you follow that don't follow you
+  back, accounts that follow each other, and accounts that follow you that you
+  don't follow.
+- **Keep or Remove.** Mark each unfollower and work through them in one go
+  with Check Unfollowers. Filter by mark, follow date and labels.
+- **Requests and Blocked.** Follow requests you sent that are still pending,
+  and accounts you've blocked.
+- **Changes between exports.** Upload a newer export and see who followed,
+  unfollowed or changed their username since the last one.
+- **Account details.** When you followed each account, when they followed you,
+  and its history across exports.
+- **Insights.** Charts of your following, followers and progress.
+- **Backups.** Download a JSON backup and restore it on any device, or export
+  a CSV that opens in Excel or Google Sheets.
+
+## Getting your Instagram export
+
+1. In Instagram, go to **Settings and activity → Accounts Centre → Your
+   information and permissions → Export your information → Create export**.
 2. Choose your profile, then **Export to device**.
-3. Under **Customize information**, clear every section and tick **Followers
-   and following** only.
-4. Date range **All time**, format **JSON** (HTML also works).
-5. Download the export, then drop the zip (or the files from it) into the page.
+3. Under **Customise information**, clear everything except **Followers and
+   following**.
+4. Set the date range to **All time** and the format to **JSON**.
+5. When Instagram emails you that it's ready, download the zip and drop the
+   whole file into the app.
 
-The export date is read from the files: from the zip's name, otherwise from
-the dates stamped on the files. An export older than the one a profile
-already has is refused, so it can't scramble the changes log.
+The zip includes optional lists (close friends, favourites, pending requests,
+blocked accounts and recently unfollowed). Uploading only `followers_1.json`
+and `following.json` works, but those labels won't appear.
 
-The other files in that folder are optional and add labels to accounts:
-`close_friends`, `pending_follow_requests`, `recently_unfollowed_profiles`,
-`profiles_you've_favorited`, `blocked_profiles`, `recent_follow_requests`.
+The export date is taken from the zip's name or the files inside it. An export
+older than the latest one you've uploaded is refused, so the changes log stays
+in order.
 
-## Web address
+## Your data
 
-The app lives at https://unfollower-checker-kitsudeve.vercel.app. The old
-address (instagram-unfollowers-iota.vercel.app) still serves it, but browser
-storage belongs to one address, so there it offers to move saved data across:
-it opens the new address, which asks before merging the data in like a
-restore. Nothing is deleted from the old address. Visitors there with nothing
-saved, or whose data has moved, are sent to the new address.
-
-## Where data lives
-
-Everything is kept in the browser's local storage for the site, and the page
-asks the browser to make that storage persistent. Clearing site data will
-remove it, so Settings offers a full JSON backup and a restore, plus a CSV
-export that can be imported back. Until a backup has been downloaded in the
-last 14 days, and the browser hasn't promised to keep the data, the page shows
-a reminder. If the browser refuses to save (storage full, private browsing) a
-red warning appears and leaving the page asks first.
-
-Restoring asks before changing anything. For each profile the newer export's
-lists win, marks are combined account by account keeping the most recent, and
-the restore can be undone.
+- Nothing leaves your device. The only network requests are for the page
+  itself, a font from Google Fonts and [JSZip](https://stuk.github.io/jszip/)
+  from cdnjs to open the zip.
+- Profiles and marks are saved in your browser's local storage. Clearing site
+  data deletes them, so keep a backup (**Settings → Download backup**). Unless the
+  browser has agreed to keep the data, the app reminds you when your last
+  backup is more than 14 days old.
+- Restoring a backup asks before changing anything and can be undone. Marks
+  are merged account by account, keeping the most recent.
 
 ## Development
 
-`index.html` is the whole app: no build step, no dependencies to install.
-Open it in a browser, or serve the folder with any static server.
+The whole app is one file, `index.html`, with inline CSS and JavaScript. There
+is no build step and no runtime dependencies to install.
 
-JSZip (for reading the export zip) loads from a CDN at runtime; everything
-else is inline.
+To run it locally, open `index.html` in a browser or serve the folder:
+
+```sh
+python3 -m http.server 8000
+```
+
+Every push to `main` is deployed to Vercel as a static site.
+
+```
+index.html      the app
+docs/           images used in this README
+tests/          browser tests (Playwright)
+```
 
 ## Tests
 
-Browser tests live in `tests/` and drive the real page in headless Chromium
-with Playwright. The saving tests use a fake Claude database shared between
-several "devices" (separate browser contexts), so two-device and failed-sync
-cases can be checked without a Claude account.
+The tests open the app in headless Chromium and use it the way a person would:
+uploading exports, marking accounts, restoring backups. Every fixed bug has a
+test that fails if it comes back. They need Node.js 18 or later.
 
-    cd tests
-    npm install
-    npm test            # or: node run.js "bug 2" to run matching tests only
+```sh
+cd tests
+npm install
+npx playwright install chromium
+npm test
+```
 
-`tests/safety.test.js` covers restoring, failed saves and export dates.
+To run only some tests, pass part of a name: `node run.js "restore"`.
 
-Each data-loss fix has its own test in `tests/saving.test.js`.
+## Licence
+
+No licence has been chosen yet, so all rights are reserved. Please ask before
+reusing the code.
+
+Unfollower Checker is not affiliated with Instagram or Meta.
