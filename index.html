@@ -66,7 +66,7 @@ input[type=checkbox]:checked::after{content:"";position:absolute;left:5px;top:1.
 .r.on{background:#0095f60f}
 .uc{display:flex;align-items:center;gap:7px;min-width:0}
 .uc a{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14.5px}
-.bdg{font-size:10.5px;font-weight:600;border-radius:5px;padding:2px 6px;white-space:nowrap;flex:none}
+.bdg{font-size:10.5px;font-weight:600;border-radius:5px;padding:2px 6px;white-space:nowrap;flex:none}.bdg.bi{display:inline-flex;align-items:center;gap:4px}.bdg svg{display:block;flex:none}
 .kbd{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin:-6px 0 14px}
 .sk .uc a{color:var(--gn)}.sr2 .uc a{color:var(--rd)}
 .dts{display:contents}
@@ -150,7 +150,13 @@ input[type=checkbox]:checked::after{content:"";position:absolute;left:5px;top:1.
 .kn a{text-decoration:underline;text-decoration-color:var(--bl);text-underline-offset:5px}
 .kd{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-top:1px solid var(--bd);text-align:left;font-size:13.5px}.kd span{color:var(--mu)}.kd b{text-align:right;font-weight:600}
 .tag{display:inline-block;padding:3px 11px;border-radius:14px;font-size:12px;font-weight:600}
-.tag.k{background:#3ddc8426;color:var(--gn)}.tag.r{background:#ff4d4f26;color:var(--rd)}
+.tag.k{background:#3ddc8426;color:var(--gn)}.tag.r{background:#ff4d4f26;color:var(--rd)}.tag.K{background:#feda7526;color:#feda75}.tag.d{background:#ffffff14;color:#bdbdbd}
+button.tag{border:0;cursor:pointer;font-family:inherit}button.tag:hover{filter:brightness(1.25)}
+.kc{position:relative}.kmore{position:absolute;top:10px;right:10px;width:34px;height:34px;padding:0;border-radius:50%;background:none;color:#9a9a9a;font-size:20px;line-height:1}.kmore:hover{background:var(--sf2);color:var(--tx)}
+.kmenu{position:absolute;top:46px;right:10px;z-index:5;background:var(--sf2);border:1px solid var(--bd);border-radius:12px;padding:5px;display:flex;flex-direction:column;min-width:210px;box-shadow:0 8px 24px #0008;text-align:left}
+.kmenu button{background:none;text-align:left;padding:9px 12px;border-radius:8px;font-size:13.5px;font-weight:500}.kmenu button:hover{background:#ffffff12}
+.sd .uc a{color:#9a9a9a;text-decoration:line-through}.star{color:#feda75;margin-left:4px}
+.fnote{font-size:12px;margin:10px 0 0}
 .kp{margin:14px 0 0;color:var(--mu);font-size:13px}
 .prg{height:3px;background:#262626;border-radius:3px;margin-top:9px;overflow:hidden}.prg i{display:block;height:100%;background:var(--bl);transition:width .25s ease}
 .kb{display:flex;justify-content:center;gap:13px;margin:14px 0 12px}
@@ -186,6 +192,11 @@ const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const url=u=>'https://www.instagram.com/'+encodeURIComponent(u)+'/';
 const st=m=>m.s||(m.k?'k':m.x?'r':'');
+/* Super keep is a Keep with sk:1, so older copies of the page still read it as Kept.
+   Deactivated is its own status, s:'d'. Neither needs a migration: existing marks are untouched. */
+const sk=m=>!!(m&&m.sk&&st(m)==='k');
+const stK=m=>sk(m)?'K':st(m||{});
+const SLAB={k:'Kept',K:'★ Super kept',r:'Removed',d:'Deactivated','':'Unchecked'};
 const MN=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const D=t=>{if(!t)return'';const d=new Date(t*1000);return d.getDate()+' '+MN[d.getMonth()]+' '+d.getFullYear()};
 const rel=t=>{if(!t)return'Unknown';const s=Date.now()/1e3-t,d=s/86400;
@@ -196,15 +207,25 @@ const SRCH='<svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true" f
 const INF='<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="#0095f6" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 7.6v.4"/></svg>';
 
 const XF=[['close_friends','cf'],['blocked','bl'],['pending_follow_requests','pend'],['recent_follow_requests','req'],['recently_unfollowed','unf'],['favorit','fav']];
-const BDG={cf:['Close friend','#feda75','#3a2f10'],fav:['Favourite','#f08ac0','#3a1228'],bl:['Blocked','#ff8e8f','#3a1515'],pend:['Request pending','#7cc5ff','#10283a'],req:['Requested','#7cc5ff','#10283a'],unf:['Recently unfollowed','#bdbdbd','#242424']};
+const BDG={cf:['Close friend','#7fe0a3','#123d24'],fav:['Favourite','#8fcfff','#10283a'],bl:['Blocked','#ff8e8f','#3a1515'],pend:['Request pending','#7cc5ff','#10283a'],req:['Requested','#7cc5ff','#10283a'],unf:['Recently unfollowed','#bdbdbd','#242424']};
 const FKEYS=['cf','fav','pend','req','unf','bl'];
+/* Our own simple icons in the spirit of Instagram's: a green circle with a star for close friends, a blue star for favourites. */
+const STARP='M12 2.6l2.8 5.9 6.5.9-4.7 4.5 1.1 6.4L12 17.3l-5.8 3 1.1-6.4-4.7-4.5 6.5-.9z';
+const BICO={cf:'<svg viewBox="0 0 24 24" width="12" height="12" aria-hidden="true"><circle cx="12" cy="12" r="12" fill="#1ebe5d"/><path d="'+STARP+'" fill="#fff" transform="translate(3.6 3.4) scale(.7)"/></svg>',fav:'<svg viewBox="0 0 24 24" width="12" height="12" aria-hidden="true"><path d="'+STARP+'" fill="#5cb8ff"/></svg>'};
+const bdgH=k=>'<span class="bdg'+(BICO[k]?' bi':'')+'" style="color:'+BDG[k][1]+';background:'+BDG[k][2]+'">'+(BICO[k]||'')+BDG[k][0]+'</span>';
+const TNOTE={nofb:'Accounts you follow that don’t follow you back. Mark each one <b>Keep</b> or <b>Remove</b>, then unfollow the ones you removed on Instagram.',
+fb:'Accounts you follow that follow you back.',
+fans:'Accounts that follow you that you don’t follow back. Open a profile to follow them back.',
+pend:'Follow requests you sent that haven’t been accepted. Open a profile and tap <b>Requested</b> to cancel it.',
+bl:'Accounts you’ve blocked. They aren’t in your followers or following, so they don’t show anywhere else. To unblock someone, open their profile on Instagram.'};
+const MNOTE='<p class="mu fnote">Marks don’t expire. One only goes back to unchecked if you clear it, or a newer export shows that person’s relationship with you has changed. Super kept accounts never reset.</p>';
 const FPL={cf:'Close friends',fav:'Favourites',pend:'Follow requests pending',req:'Recent follow requests',unf:'Recently unfollowed',bl:'Blocked accounts'};
 const emptyFl=()=>({cf:{},fav:{},pend:{},req:{},unf:{},bl:{}});
 const hasFl=p=>FKEYS.some(k=>Object.keys((p.fl||{})[k]||{}).length);
 const FSEC=[
 {k:'dat',t:'Date',o:[['w30','Last 30 days'],['m3','1 to 3 months'],['m6','3 to 6 months'],['m12','6 to 12 months'],['y3','1 to 3 years'],['o3y','Over 3 years']]},
 {k:'usr',t:'Username',o:[['digits','Has numbers'],['sym','Has a dot or underscore'],['long','Over 15 characters'],['del','Deleted accounts']]},
-{k:'st',t:'Status',o:[['u','Unchecked'],['k','Kept'],['r','Removed']]},
+{k:'st',t:'Status',o:[['u','Unchecked'],['k','Kept'],['K','Super kept'],['r','Removed'],['d','Deactivated']]},
 {k:'flg',t:'Lists',o:FKEYS.map(k=>[k,BDG[k][0]])},
 {k:'chk',t:'Checked',o:[['c7','Last 7 days'],['c30','1 to 4 weeks'],['c90','1 to 3 months'],['c180','3 to 6 months'],['o180','Over 6 months']]}];
 const RANGE={dat:{w30:[0,30],m3:[30,90],m6:[90,180],m12:[180,365],y3:[365,1095],o3y:[1095,1e9]},
@@ -230,6 +251,8 @@ log:[{d:'2026-11-18',pd:'2026-10-21',ga:['nasa','taylorswift'],gr:['oldfriend_99
 {d:'2026-10-21',pd:'2026-08-02',ga:['dualipa','harrystyles','spotify'],gr:['anon_user'],grT:{anon_user:1690000000},fa:['nike','therock'],fr:['randomguy_7'],frT:{randomguy_7:1660000000}}]};
 let t=Date.now()/1000-2.4e8;
 a.forEach(u=>p.fing[u]=t+=4e6);b.forEach(u=>{p.fing[u]=t+=4e6;p.fers[u]=t+=25e5});c.forEach(u=>p.fers[u]=t+=35e5);
+p.meta={nike:{s:'k',sk:1,t:Date.now()/1000-20*86400},natgeo:{s:'k',sk:1,t:Date.now()/1000-3*86400},spotify:{s:'k',sk:1,t:Date.now()/1000-45*86400}};
+p.fl=Object.assign(emptyFl(),{cf:{taylorswift:1,zendaya:1},fav:{nasa:1,arianagrande:1},pend:{zendaya_fan:Date.now()/1000-40*86400,'cozy.cafe':Date.now()/1000-9*86400},bl:{spam_bot_42:Date.now()/1000-300*86400,'giveaway.winner.dm':Date.now()/1000-20*86400}});
 p.fing.cristiano=Date.now()/1000-1.9e8;p.fers.mrbeast=Date.now()/1000-12*86400;p.fers.sza=Date.now()/1000-70*86400;
 return p})();
 S.P.example_user=EX;
@@ -244,7 +267,8 @@ return{fing,fers}}
 let EC={k:'',v:null};
 function ef(){const p=cp(),k=S.cur+'|'+S.snap+'|'+p.date+'|'+p.log.length+'|'+Object.keys(p.fing).length;
 if(EC.k!==k)EC={k,v:stateAt(p,S.snap)};return EC.v}
-const L=(e,p)=>{const F=Object.keys(e.fing);return{nofb:F.filter(u=>!(u in e.fers)),fb:F.filter(u=>u in e.fers),fans:Object.keys(e.fers).filter(u=>!(u in e.fing)),pend:Object.keys(((p||cp()).fl||{}).pend||{})}};
+const L=(e,p)=>{const F=Object.keys(e.fing);return{nofb:F.filter(u=>!(u in e.fers)),fb:F.filter(u=>u in e.fers),fans:Object.keys(e.fers).filter(u=>!(u in e.fing)),pend:Object.keys(((p||cp()).fl||{}).pend||{}),bl:Object.keys(((p||cp()).fl||{}).bl||{})}};
+const blT=(p,u)=>((p.fl||{}).bl||{})[u];
 const pendT=(p,u)=>((p.fl||{}).pend||{})[u];
 const hasPend=p=>!!Object.keys(((p||cp()).fl||{}).pend||{}).length;
 const live=()=>S.snap===-1;
@@ -259,12 +283,12 @@ usr:{digits:/\d/.test(u),sym:/[._]/.test(u),long:u.length>15,del:u.startsWith('_
 flg:FKEYS.reduce((a,k)=>{a[k]=!!((fl||{})[k]||{})[u];return a},{})});
 const flagsOf=(p,u)=>FKEYS.filter(k=>((p.fl||{})[k]||{})[u]);
 const okF=(arr,map)=>!arr.length||arr.some(v=>map[v]);
-function match(u,ts,f,m,now,fl){if(f.st.length&&!f.st.includes(st(m||{})||'u'))return false;
+function match(u,ts,f,m,now,fl){if(f.st.length&&!f.st.includes(st(m||{})||'u')&&!(sk(m)&&f.st.includes('K')))return false;
 const T=tests(u,ts,now,fl,m);if(!ts&&f.dat.length)return false;
 return okF(f.dat,T.dat)&&okF(f.usr,T.usr)&&okF(f.flg||[],T.flg)&&okF(f.chk||[],T.chk)}
 
 function view(){const p=cp(),e=ef(),q=($('#q').value||'').trim().toLowerCase(),now=Date.now()/1e3,
-t=u=>S.tab==='fans'?e.fers[u]:S.tab==='pend'?pendT(p,u):e.fing[u],
+t=u=>S.tab==='fans'?e.fers[u]:S.tab==='pend'?pendT(p,u):S.tab==='bl'?blT(p,u):e.fing[u],
 a=(L(e,p)[S.tab]||[]).filter(u=>(!q||u.includes(q))&&match(u,t(u),S.f,p.meta[u]||{},now,p.fl)),
 c={az:(x,y)=>x<y?-1:1,za:(x,y)=>x<y?1:-1,old:(x,y)=>t(x)-t(y),nw:(x,y)=>t(y)-t(x),len:(x,y)=>x.length-y.length||(x<y?-1:1),
 yo:(x,y)=>e.fers[x]-e.fers[y],yn:(x,y)=>e.fers[y]-e.fers[x]},
@@ -272,6 +296,9 @@ k2=(/^y/.test(S.sort)&&S.tab!=='fb')?'az':S.sort;
 return a.sort(c[k2]||c.az)}
 
 /* ---------- storage ---------- */
+/* Development copy (the Claude test mirror sets window.UC_DEV): only the example
+   profile, nothing read from or written to storage, so real data is never touched. */
+const DEV=window.UC_DEV===true;
 let coll=null,mt,persist='checking';
 const dataKB=()=>{let b=0;Object.keys(S.P).forEach(k=>{if(!S.P[k].demo)b+=JSON.stringify(S.P[k]).length});return Math.round(b/1024)};
 async function storageInfo(){try{if(!navigator.storage||!navigator.storage.persist)return persist='unknown';
@@ -299,7 +326,7 @@ timers[n]=setTimeout(()=>{delete timers[n];save(n,dirty[n]===2)},400)};
 /* Returns false when the browser refused to store the data (storage full,
    private browsing, site data blocked). Without a Claude account the browser
    is the only copy, so save() turns that into a visible error. */
-function writeLocal(n,full){const p=S.P[n];if(!p||p.demo)return true;
+function writeLocal(n,full){const p=S.P[n];if(!p||p.demo||DEV)return true;
 try{localStorage.setItem('igm_'+n,JSON.stringify(p.meta||{}));
 if(full){localStorage.setItem('ig_'+n,JSON.stringify(lists(p)));localStorage.setItem('ig_idx',JSON.stringify(mine()))}return true}catch(e){return false}}
 const LOCAL_FAIL='this browser wouldn’t store it. Its storage may be full, or it may be in private browsing';
@@ -315,7 +342,7 @@ del=Object.assign({},o.del||{},idxDel);
 mine().forEach(k=>{if(del[k]&&(S.P[k].sa||0)>del[k])delete del[k]});
 const names=[...new Set((o.n||[]).concat(mine()))].filter(k=>S.P[k]&&!S.P[k].demo?!(del[k]&&del[k]>=(S.P[k].sa||0)):!del[k]);
 idxDel=del;await coll.doc('index').set({n:names,del})}
-async function save(n,full){const p=S.P[n];if(!p||p.demo){delete dirty[n];return}
+async function save(n,full){const p=S.P[n];if(!p||p.demo||DEV){delete dirty[n];return}
 if(!ready){dirty[n]=full?2:(dirty[n]||1);return}
 const was=dirty[n];
 try{
@@ -350,6 +377,7 @@ const lm=parseMeta(localStorage.getItem('igm_'+n));
 if(lm){meta=mergeMeta(meta,lm);if(coll&&!push&&JSON.stringify(meta)!==JSON.stringify(dbm||{}))push=1}
 base.meta=meta;return{p:base,push}}
 async function load(){let ns=[];const push={};
+if(DEV){ready=true;persist='yes';render();return}
 try{const loc=parseJ(localStorage.getItem('ig_idx'))||[];
 if(coll){const i=await coll.doc('index').get(),o=i.exists?i.data()||{}:{};idxDel=o.del||{};
 ns=[...new Set((o.n||[]).concat(loc))]}
@@ -379,12 +407,12 @@ const H=rows[0].map(x=>x.trim().toLowerCase()),ix=k=>H.indexOf(k);
 if(ix('username')<0)return null;
 const iU=ix('username'),iR=ix('relationship'),iF=ix('you_followed'),iY=ix('they_followed_you'),iS=ix('status'),iL=ix('flags'),
 ts=v=>{const d=Date.parse((v||'').trim()+'T00:00:00Z');return isNaN(d)?0:d/1e3},
-SN={kept:'k',removed:'r'},out={fing:{},fers:{},meta:{},fl:emptyFl()};
+SN={kept:'k',removed:'r','super kept':'K',deactivated:'d'},out={fing:{},fers:{},meta:{},fl:emptyFl()};
 rows.slice(1).forEach(r=>{const u=(r[iU]||'').trim().toLowerCase();if(!u||u==='username')return;
 const rel=(r[iR]||'').trim().toLowerCase(),a=iF>=0?ts(r[iF]):0,b=iY>=0?ts(r[iY]):0;
 if(rel==='mutual'||rel==='unfollower'||(!rel&&a))out.fing[u]=a;
 if(rel==='mutual'||rel==='fan'||(!rel&&b))out.fers[u]=b;
-const st2=SN[(r[iS]||'').trim().toLowerCase()];if(st2)out.meta[u]={s:st2};
+const st2=SN[(r[iS]||'').trim().toLowerCase()];if(st2)out.meta[u]=st2==='K'?{s:'k',sk:1}:{s:st2};
 if(iL>=0)(r[iL]||'').split(';').map(x=>x.trim()).filter(Boolean).forEach(k=>{if(out.fl[k])out.fl[k][u]=1})});
 return (Object.keys(out.fing).length||Object.keys(out.fers).length)?out:null}
 function parse(n,t){const b=n.split('/').pop();
@@ -446,8 +474,8 @@ g.fr=g.fr.filter(u=>oldN.indexOf(u)<0);g.gr=g.gr.filter(u=>oldN.indexOf(u)<0);
 g.fa=g.fa.filter(u=>newN.indexOf(u)<0);g.ga=g.ga.filter(u=>newN.indexOf(u)<0)}
 g.frT=ts(P.fing,g.fr);g.grT=ts(P.fers,g.gr);
 const nF2=got.fing||P.fing,nE2=got.fers||P.fers,rel=(f,e2,u)=>(u in f?1:0)+(u in e2?2:0);
-Object.keys(P.meta).forEach(u=>{if(!st(P.meta[u]))return;
-if(rel(P.fing,P.fers,u)!==rel(nF2,nE2,ren[u]||u)){P.meta[u].s='';P.meta[u].t=Math.round(Date.now()/1000);delete P.meta[u].k;delete P.meta[u].x;reset.push(u)}});
+Object.keys(P.meta).forEach(u=>{if(!st(P.meta[u])||sk(P.meta[u]))return;
+if(rel(P.fing,P.fers,u)!==rel(nF2,nE2,ren[u]||u)){P.meta[u].s='';P.meta[u].t=Math.round(Date.now()/1000);delete P.meta[u].sk;delete P.meta[u].k;delete P.meta[u].x;reset.push(u)}});
 Object.keys(ren).forEach(o2=>{const nn=ren[o2];
 if(P.meta[o2]){P.meta[nn]=P.meta[o2];P.meta[o2]={s:'',t:Math.round(Date.now()/1000)}}
 FKEYS.forEach(k=>{const b=(P.fl||{})[k];if(b&&b[o2]!==undefined){b[nn]=b[o2];delete b[o2]}})});
@@ -482,14 +510,14 @@ const DRAW={bars,stack,cols,donut:donuts};
 function chartCard(id,title,rows,types,extra){const t=S.ins[id],o=(sel,v,a)=>'<select data-ins="'+id+(sel==='d'?'d':'')+'">'+a.map(x=>'<option value="'+x[0]+'" '+(v===x[0]?'selected':'')+'>'+x[1]+'</option>').join('')+'</select>';
 return '<div class="sc"><div class="sh"><h4>'+title+'</h4>'+(extra||'')+o('t',t,types)+'</div>'+(DRAW[t]||bars)(rows)+lgd(rows[0].p)+'</div>'}
 
-function ins(e,l){const p=cp(),F=Object.keys(e.fing),R=Object.keys(e.fers),nF=Math.max(1,F.length),sc={'':0,k:0,r:0},yr={},gy={};
+function ins(e,l){const p=cp(),F=Object.keys(e.fing),R=Object.keys(e.fers),nF=Math.max(1,F.length),sc={'':0,k:0,r:0,d:0},yr={},gy={};
 l.nofb.forEach(u=>sc[st(p.meta[u]||{})]++);
 F.forEach(u=>{const t=e.fing[u];if(t){const y=new Date(t*1e3).getFullYear();(yr[y]=yr[y]||[0,0])[u in e.fers?0:1]++}});
 R.forEach(u=>{const t=e.fers[u];if(t){const y=new Date(t*1e3).getFullYear();gy[y]=(gy[y]||0)+1}});
 const years=[...new Set(Object.keys(yr).concat(Object.keys(gy)))].sort(),yv=y=>yr[y]||[0,0],
 C={g:'var(--gn)',r:'var(--rd)',b:'var(--bl)',p:'var(--pk)',n:'#3a3a3a'},
 rate=Math.round(l.fb.length/nF*100),
-prog=[{l:'Reviewed',cv:Math.round((sc.k+sc.r)/Math.max(1,l.nofb.length)*100),p:[{v:sc.k,c:C.g,n:'Kept'},{v:sc.r,c:C.r,n:'Removed'},{v:sc[''],c:C.n,n:'Unchecked'}]}],
+prog=[{l:'Reviewed',cv:Math.round((sc.k+sc.r+sc.d)/Math.max(1,l.nofb.length)*100),p:[{v:sc.k,c:C.g,n:'Kept'},{v:sc.r,c:C.r,n:'Removed'}].concat(sc.d?[{v:sc.d,c:'#8e8e8e',n:'Deactivated'}]:[]).concat([{v:sc[''],c:C.n,n:'Unchecked'}])}],
 progB=[{l:'Kept',p:[{v:sc.k,c:C.g,n:'Kept'}]},{l:'Removed',p:[{v:sc.r,c:C.r,n:'Removed'}]},{l:'Unchecked',p:[{v:sc[''],c:C.n,n:'Unchecked'}]}],
 who=[{l:'Accounts you follow',p:[{v:l.fb.length,c:C.b,n:'Follow you back'},{v:l.nofb.length,c:C.r,n:'Don’t follow back'}]},
 {l:'Your followers',p:[{v:l.fb.length,c:C.b,n:'You follow back'},{v:l.fans.length,c:C.p,n:'Fans'}]}],
@@ -538,13 +566,13 @@ return '<details class="ch" data-k="'+esc(k)+'" '+(S.hid[k]?'':'open')+'><summar
 function fpanel(store,attr){const SS=FSEC.filter(x=>x.k!=='flg'||hasFl(cp()));
 return '<div class="fx"><div class="fg">'+SS.map(s=>'<div class="fs"><b>'+s.t+'</b>'
 +s.o.map(o=>'<label class="cb2"><input type="checkbox" data-'+attr+'="'+s.k+'" value="'+o[0]+'" data-fid="'+attr+s.k+o[0]+'" '+(store[s.k].includes(o[0])?'checked':'')+'>'+o[1]+'</label>').join('')+'</div>').join('')
-+'</div><div class="ft"><button class="gh" data-a="'+(attr==='f'?'fclr':'kclr')+'">Clear filters</button></div></div>'}
++'</div>'+MNOTE+'<div class="ft"><button class="gh" data-a="'+(attr==='f'?'fclr':'kclr')+'">Clear filters</button></div></div>'}
 const nF=s=>FSEC.reduce((a,x)=>a+((s[x.k]||[]).length),0);
 
 /* ---------- render ---------- */
 function render(){const p=cp(),e=ef(),l=L(e,p),F=Object.keys(e.fing).length,R=Object.keys(e.fers).length,
 names=Object.keys(S.P),sn=snaps(p),pv=stateAt(p,S.snap+1),hasPv=!!p.log[S.snap+1],
-lt=S.tab==='chg'||S.tab==='ins',ed=live();
+lt=S.tab==='chg'||S.tab==='ins';let ed=live();
 const af=document.activeElement,fid=af&&af.getAttribute?af.getAttribute('data-fid'):null,ss=af&&af.selectionStart;
 
 $('#hd').innerHTML='<span class="logo">Unfollower Checker</span>'
@@ -556,7 +584,7 @@ $('#hd').innerHTML='<span class="logo">Unfollower Checker</span>'
 $('#st').innerHTML=[[F,'Following'],[R,'Followers']].map((x,i)=>{const d=hasPv?x[0]-(i?Object.keys(pv.fers).length:Object.keys(pv.fing).length):0;
 return '<div class="cd"><b>'+x[0]+'</b><span class="mu">'+x[1]+'</span>'+(hasPv?'<i class="'+(d>0?'up':d<0?'dn':'fl')+'">'+(d>0?'▲ +'+d:d<0?'▼ '+d:'– 0')+'</i>':'')+'</div>'}).join('');
 
-$('#hb').innerHTML=(needBk()?'<div class="hist" id="bkr" style="flex-wrap:wrap"><span style="flex:1 1 220px">Your data is only saved in this browser, which can clear it (Safari does after 7 days without a visit). '+(lastBk()?'Your last backup was '+rel(lastBk()/1000).toLowerCase()+'.':'You haven’t downloaded a backup yet.')+'</span><button data-a="bkup">Download backup</button><button data-a="bklater" class="gh" style="background:none">Later</button></div>':'')+(saveErr?'<div class="hist" style="background:#ff4d4f14;border-color:#ff4d4f44;color:#ffb3b4"><span>Your last change couldn’t be saved: '+esc(saveErr)+'. Download a backup from Settings so you don’t lose it.</span><button data-a="set" style="background:#ff4d4f22;color:#ffb3b4">Settings</button></div>':'')+(ed?'':'<div class="hist"><span>Viewing your data as it was on '+D2(snapDate(p))+'. Checking and uploading are off while you look back.</span><button data-a="latest">Back to latest</button></div>');
+$('#hb').innerHTML=(DEV?'<div class="hist"><span>Development copy: only the example profile, and nothing you do here is saved. Your real data is in the live app.</span></div>':'')+(needBk()?'<div class="hist" id="bkr" style="flex-wrap:wrap"><span style="flex:1 1 220px">Your data is only saved in this browser, which can clear it (Safari does after 7 days without a visit). '+(lastBk()?'Your last backup was '+rel(lastBk()/1000).toLowerCase()+'.':'You haven’t downloaded a backup yet.')+'</span><button data-a="bkup">Download backup</button><button data-a="bklater" class="gh" style="background:none">Later</button></div>':'')+(saveErr?'<div class="hist" style="background:#ff4d4f14;border-color:#ff4d4f44;color:#ffb3b4"><span>Your last change couldn’t be saved: '+esc(saveErr)+'. Download a backup from Settings so you don’t lose it.</span><button data-a="set" style="background:#ff4d4f22;color:#ffb3b4">Settings</button></div>':'')+(ed?'':'<div class="hist"><span>Viewing your data as it was on '+D2(snapDate(p))+'. Checking and uploading are off while you look back.</span><button data-a="latest">Back to latest</button></div>');
 
 if(S.cks.scope==='pend'&&!l.pend.length)S.cks.scope='nofb';
 const scope=(CKS.find(x=>x[0]===S.cks.scope)||CKS[0])[1],unc=(l[S.cks.scope]||[]).filter(u=>!st(p.meta[u]||{})&&!u.startsWith('__deleted__')).length;
@@ -564,29 +592,30 @@ $('#ckb').innerHTML='<span>✓</span> Check '+scope+(unc?' <span class="mu" styl
 $('#ckb').disabled=!unc||!ed;
 
 $('#tb').innerHTML=[['nofb','Unfollowers',l.nofb.length],['fb','Mutuals',l.fb.length],['fans','Fans',l.fans.length]]
-.concat(l.pend.length?[['pend','Requests',l.pend.length]]:[]).concat([['chg','Changes',''],['ins','Insights','']])
+.concat([['pend','Requests',l.pend.length],['bl','Blocked',l.bl.length]]).concat([['chg','Changes',''],['ins','Insights','']])
 .map(x=>'<button data-a="tab" data-t="'+x[0]+'" class="'+(S.tab===x[0]?'on':'')+'">'+x[1]+(x[2]!==''?'<span class="n">'+x[2]+'</span>':'')+'</button>').join('');
 $('#bar').hidden=lt;
 
 let h='';
 if(S.tab==='chg')h=chg(p);
 else if(S.tab==='ins')h=ins(e,l);
-else{const v=view(),dl=S.tab==='fans'?'Followed you':S.tab==='pend'?'Requested':'Followed',
-C=S.tab==='nofb'?[['Followed',u=>e.fing[u]]]:S.tab==='fb'?[['Followed',u=>e.fing[u]],['Followed you',u=>e.fers[u]]]:S.tab==='pend'?[['Requested',u=>pendT(p,u)]]:[['Followed you',u=>e.fers[u]]],
+else{const v=view(),bt=S.tab==='bl',dl=S.tab==='fans'?'Followed you':S.tab==='pend'?'Requested':bt?'Blocked':'Followed',
+C=S.tab==='nofb'?[['Followed',u=>e.fing[u]]]:S.tab==='fb'?[['Followed',u=>e.fing[u]],['Followed you',u=>e.fers[u]]]:S.tab==='pend'?[['Requested',u=>pendT(p,u)]]:bt?[['Blocked',u=>blT(p,u)]]:[['Followed you',u=>e.fers[u]]],
 shown=v.slice(0,S.n),selV=v.filter(u=>S.sel.has(u)),chips=[];
 FSEC.forEach(s=>S.f[s.k].forEach(o=>chips.push('<span class="chip">'+FLAB[s.k+':'+o]+'<a href="#" data-a="unf" data-k="'+s.k+'" data-v="'+o+'" aria-label="Remove filter">×</a></span>')));
 const sorts=SORTS.map(x=>[x[0],x[0]==='old'?dl+': oldest first':x[0]==='nw'?dl+': newest first':x[1]])
 .concat(S.tab==='fb'?[['yo','Followed you: oldest'],['yn','Followed you: newest']]:[]);
-h=(S.tab==='pend'?'<p class="mu" style="margin:14px 0 0;font-size:13px">Follow requests you sent that haven’t been accepted. Open a profile and tap <b>Requested</b> to cancel it.</p>':'')
+if(bt)ed=false;
+h=(TNOTE[S.tab]?'<p class="mu" style="margin:14px 0 0;font-size:13px">'+TNOTE[S.tab]+'</p>':'')
 +'<div class="card" style="--cols:'+(ed?'30px ':'')+'minmax(0,1fr) '+'150px '.repeat(C.length)+(ed?'80px':'0px')+'">'
-+'<div class="sr"><span class="mu">'+v.length+(v.length===1?' account':' accounts')+(S.f.st.length?'':' · '+v.filter(u=>!st(p.meta[u]||{})).length+' unchecked')+'</span>'
++'<div class="sr"><span class="mu">'+v.length+(v.length===1?' account':' accounts')+(S.f.st.length||bt?'':' · '+v.filter(u=>!st(p.meta[u]||{})).length+' unchecked')+'</span>'
 +'<div class="sg"><button data-a="lf" class="ic'+(S.fo?' pr':'')+'" data-fid="lf" title="Filters" aria-label="Filters" aria-expanded="'+S.fo+'">'+FIC+(nF(S.f)?'<i class="dt"></i>':'')+'</button>'
 +'<label>Sort<select data-sort="1" data-fid="sort">'+sorts.map(o=>'<option value="'+o[0]+'" '+(S.sort===o[0]?'selected':'')+'>'+o[1]+'</option>').join('')+'</select></label></div></div>'
 +(S.fo?fpanel(S.f,'f'):'')
 +(chips.length?'<div class="chips">'+chips.join('')+'<button class="gh" data-a="fclr" style="padding:4px 11px;font-size:12px">Clear all</button></div>':'')
 +(selV.length?'<div class="bulk"><b>'+selV.length+' selected</b><button data-a="bk">✓ Keep</button><button data-a="br">✕ Remove</button><button class="gh" data-a="bu">Clear status</button><button class="gh" data-a="bn">Deselect</button></div>':'')
 +'<div class="h">'+(ed?'<input type="checkbox" data-all="1" data-fid="all" aria-label="Select all" '+(v.length&&selV.length===v.length?'checked':'')+'>':'')+'<span>Username</span>'+C.map(c=>'<span>'+c[0]+'</span>').join('')+(ed?'<span></span>':'')+'</div>'
-+(v.length?shown.map((u,i)=>row(u,p,C,i,ed)).join(''):'<div class="empty"><b>Nothing here</b>'+(q0()?'No usernames match your search.':nF(S.f)?'No accounts match these filters.':S.tab==='pend'?'No pending follow requests in your export.':'This list is empty.')+'</div>')
++(v.length?shown.map((u,i)=>row(u,p,C,i,ed)).join(''):'<div class="empty"><b>Nothing here</b>'+(q0()?'No usernames match your search.':nF(S.f)?'No accounts match these filters.':S.tab==='pend'?'No pending follow requests in this profile’s data. If you have some, upload your whole Instagram zip to bring them in.':bt?'No blocked accounts in this profile’s data. If you have some, upload your whole Instagram zip to bring them in.':'This list is empty.')+'</div>')
 +'</div>'
 +(v.length>S.n?'<div class="pg"><button class="gh" data-a="more">Show '+Math.min(200,v.length-S.n)+' more · '+(v.length-S.n)+' hidden</button></div>':'')}
 $('#list').className=(S.tab!==lastTab?'fade':'');lastTab=S.tab;
@@ -603,10 +632,12 @@ let mKind=null,lastTab=null;
 const q0=()=>(($('#q')||{}).value||'').trim();
 
 function row(u,p,C,i,ed){const s=st(p.meta[u]||{}),dl=u.startsWith('__deleted__'),se=S.sel.has(u);
-return '<div class="r'+(s==='k'?' sk':s==='r'?' sr2':'')+(se?' on':'')+'">'
+const sup=sk(p.meta[u]);
+return '<div class="r'+(s==='k'?' sk':s==='r'?' sr2':s==='d'?' sd':'')+(se?' on':'')+'">'
 +(ed?'<input type="checkbox" data-sel="'+esc(u)+'" data-i="'+i+'" data-fid="s'+esc(u)+'" aria-label="Select '+esc(u)+'" '+(se?'checked':'')+'>':'')
 +'<div class="uc">'+(dl?'<span class="mu" data-u="'+esc(u)+'">Deleted account</span>':'<a href="'+url(u)+'" target="_blank" rel="noopener noreferrer">'+esc(u)+'</a>')
-+flagsOf(p,u).filter(k=>!(k==='pend'&&S.tab==='pend')).map(k=>'<span class="bdg" style="color:'+BDG[k][1]+';background:'+BDG[k][2]+'">'+BDG[k][0]+'</span>').join('')+'</div>'
++(sup?'<span class="star" title="Super kept" aria-label="Super kept">★</span>':'')+(s==='d'?'<span class="bdg" style="color:#bdbdbd;background:#262626">Deactivated</span>':'')
++flagsOf(p,u).filter(k=>!(k==='pend'&&S.tab==='pend')&&!(k==='bl'&&S.tab==='bl')).map(k=>bdgH(k)).join('')+'</div>'
 +'<div class="dts">'+C.map(c=>{const t=c[1](u);return '<span class="dc" data-l="'+c[0]+'">'+(t?'<b>'+rel(t)+'</b><em>'+D(t)+'</em>':'<b class="mu">Unknown</b>')+'</span>'}).join('')+'</div>'
 +(ed?'<div class="acts"><button class="ab k'+(s==='k'?' on2':'')+'" data-a="mk" data-u="'+esc(u)+'" title="Keep" aria-label="Keep '+esc(u)+'" aria-pressed="'+(s==='k')+'">✓</button>'
 +'<button class="ab x'+(s==='r'?' on2':'')+'" data-a="mr" data-u="'+esc(u)+'" title="Remove" aria-label="Remove '+esc(u)+'" aria-pressed="'+(s==='r')+'">✕</button></div>':'')
@@ -654,8 +685,8 @@ return '<div class="mb"><h3>Upload your Instagram data</h3><p class="mu" style="
 
 /* ---------- settings ---------- */
 function csvText(){const p=cp(),e=ef(),l=L(e),iso=t=>t?new Date(t*1000).toISOString().slice(0,10):'',
-SN={k:'Kept',r:'Removed','':'Unchecked'},rows=[['username','relationship','you_followed','they_followed_you','status','flags','profile_url']],
-add=(u,r)=>rows.push([u,r,iso(e.fing[u]),iso(e.fers[u]),SN[st(p.meta[u]||{})],flagsOf(p,u).join(';'),url(u)]);
+SN={k:'Kept',K:'Super kept',r:'Removed',d:'Deactivated','':'Unchecked'},rows=[['username','relationship','you_followed','they_followed_you','status','flags','profile_url']],
+add=(u,r)=>rows.push([u,r,iso(e.fing[u]),iso(e.fers[u]),SN[stK(p.meta[u]||{})],flagsOf(p,u).join(';'),url(u)]);
 l.nofb.forEach(u=>add(u,'Unfollower'));l.fb.forEach(u=>add(u,'Mutual'));l.fans.forEach(u=>add(u,'Fan'));
 return rows.map(r=>r.map(c=>/[",\n]/.test(c)?'"'+String(c).replace(/"/g,'""')+'"':c).join(',')).join('\r\n')}
 function csvSave(){const p=cp();return saveFile('unfollower-checker-'+p.name+'-'+(snapDate(p)||'export')+'.csv',csvText(),'text/csv;charset=utf-8')}
@@ -741,7 +772,7 @@ return '<div class="mb"><h3>Settings</h3>'
 +'<button class="gh dng" data-a="dsnap" style="flex:0 0 auto">'+(cf('snap')?'Tap again to delete '+esc((sn.find(x=>String(x[0])===String(S.snapSel))||sn[0])[1]):'Delete snapshot')+'</button></div></div>'
 +'<div class="sset"><b>Clear history</b><p class="mu">Deletes the changes log and every earlier snapshot. Your latest data and marks stay.</p>'
 +'<button class="gh dng" data-a="dhist">'+(cf('hist')?'Tap again to clear':'Clear history')+'</button></div>':'')
-+'<div class="sset"><b>Clear marks</b><p class="mu">Sets every account in this profile back to unchecked.</p>'
++'<div class="sset"><b>Clear marks</b><p class="mu">Sets every account in this profile back to unchecked, except super kept ones.</p>'
 +'<button class="gh dng" data-a="dmarks">'+(cf('marks')?'Tap again to clear':'Clear all marks')+'</button></div>'
 +(demo?'':'<div class="sset"><b>Delete profile</b><p class="mu">Removes @'+esc(p.name)+', its uploads, history and marks. This cannot be undone.</p>'
 +'<button class="gh dng" data-a="dprof">'+(cf('prof')?'Tap again to delete @'+esc(p.name):'Delete profile')+'</button></div>')
@@ -761,16 +792,18 @@ if((g.fr||[]).indexOf(u)>=0)at('You unfollowed them');
 if((g.rs||[]).indexOf(u)>=0)at('Mark cleared, relationship had changed');
 (g.rn||[]).forEach(x=>{if(x[1]===u)at('Changed username from '+x[0]);if(x[0]===u)at('Changed username to '+x[1])})});
 return '<div class="mb"><h3 style="word-break:break-all;margin-bottom:10px">'+(dl?'Deleted account':esc(u))+'</h3>'
-+(fl.length?'<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">'+fl.map(k=>'<span class="bdg" style="color:'+BDG[k][1]+';background:'+BDG[k][2]+'">'+BDG[k][0]+'</span>').join('')+'</div>':'')
++(fl.length?'<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">'+fl.map(k=>bdgH(k)).join('')+'</div>':'')
 +row('Relationship',relTxt)
 +(fg?row('You followed',rel(fg)+' · '+D(fg)):'')
 +(fr?row('They followed you',rel(fr)+' · '+D(fr)):'')
 +(pt?row('You requested',rel(pt)+' · '+D(pt)):'')
-+row('Your mark',s==='k'?'Keep'+(m.t?' · set '+rel(m.t):''):s==='r'?'Remove'+(m.t?' · set '+rel(m.t):''):'Unchecked')
++row('Your mark',SLAB[stK(m)]+(s&&m.t?' · set '+rel(m.t):''))
 +(ev.length?'<div class="sset" style="padding-bottom:0"><b>History</b>'+ev.map(x=>'<div class="kd"><span>'+esc(D2(x[0]))+'</span><b style="font-weight:500">'+esc(x[1])+'</b></div>').join('')+'</div>':'')
 +'<div class="mact" style="flex-wrap:wrap">'
 +'<button class="gh" data-a="mk" data-u="'+esc(u)+'">'+(s==='k'?'✓ Kept':'Keep')+'</button>'
 +'<button class="gh" data-a="mr" data-u="'+esc(u)+'">'+(s==='r'?'✕ Removed':'Remove')+'</button>'
++'<button class="gh" data-a="msk" data-u="'+esc(u)+'">'+(sk(m)?'★ Super kept':'★ Super keep')+'</button>'
++(dl?'':'<button class="gh" data-a="mdd" data-u="'+esc(u)+'">'+(s==='d'?'Deactivated ✓':'Doesn’t exist')+'</button>')
 +(dl?'':'<a class="gh" style="padding:8px 14px;border-radius:10px" href="'+url(u)+'" target="_blank" rel="noopener noreferrer">Open on Instagram ↗</a>')
 +'<button class="pr" data-a="close">Done</button></div></div>'}
 
@@ -792,20 +825,25 @@ hd='<div class="kh"><select data-ck2="scope" aria-label="Group">'+ckScopes(p).ma
 +s.o.map(o=>'<label class="cb2"><input type="checkbox" data-ck="'+s.k+'" value="'+o[0]+'" '+(k[s.k].includes(o[0])?'checked':'')+'>'+o[1]+'</label>').join('')+'</div>').join('')
 +'<div class="fs"><b>Order</b><label class="cb2" style="padding-top:0"><select data-ck2="sort" style="width:100%">'
 +[['shuffle','Shuffle']].concat(SORTS).map(x=>'<option value="'+x[0]+'" '+(k.sort===x[0]?'selected':'')+'>'+x[1]+'</option>').join('')+'</select></label></div>'
-+'</div><div class="ft"><button class="gh" data-a="kclr">Reset</button></div></div>':'');
++'</div>'+MNOTE+'<div class="ft"><button class="gh" data-a="kclr">Reset</button></div></div>':'');
 el.hidden=false;
 if(u===undefined){const left=c.q.filter(x=>!st(p.meta[x]||{})).length,more=qb(p).length;
 el.innerHTML='<div class="kw">'+hd+'<div class="kc"><h3 style="margin:0 0 8px">'+(c.q.length?'All done':'Nothing to check')+'</h3>'
 +'<p class="mu" style="margin:0 0 16px">'+(c.q.length?(left?left+' skipped account'+(left>1?'s are':' is')+' still unchecked.':'You reached the end of this list.'):'No accounts match these settings. Try another group or change the filters.')+'</p>'
 +(more?'<button class="pr" data-a="ckagain">'+(left?'Go through skipped':'Start again')+'</button> ':'')+'<button class="gh" data-a="ckclose">Close</button>'
 +(c.i>0?'<p style="margin:14px 0 0"><button class="gh" data-a="ck" data-k="back">← Back</button></p>':'')+'</div></div>';return}
-const s=st(p.meta[u]||{}),dl=u.startsWith('__deleted__'),fg=e.fing[u],fr=e.fers[u],pt=pendT(p,u),
+const s=st(p.meta[u]||{}),dl=u.startsWith('__deleted__'),fg=e.fing[u],fr=e.fers[u],pt=pendT(p,u),ed0=live(),
 rel2=k.scope==='pend'?'Follow request not accepted':fg&&fr?'Follows you back':fg?'Doesn’t follow you back':'Follows you, you don’t follow back',
 kd=(a,b)=>'<div class="kd"><span>'+a+'</span><b>'+b+'</b></div>';
 el.innerHTML='<div class="kw">'+hd
-+'<div class="kc" id="kc">'+(s?'<span class="tag '+s+'">'+(s==='k'?'Kept':'Removed')+'</span>':'')
++'<div class="kc" id="kc">'+(ed0?'<button class="kmore" data-a="ckm" title="More" aria-label="More options" aria-expanded="'+!!c.menu+'">⋯</button>':'')
++(c.menu?'<div class="kmenu" role="menu">'
++(sk(p.meta[u])?'':'<button role="menuitem" data-a="ck" data-k="K">★ Super keep</button>')
++(s==='d'||dl?'':'<button role="menuitem" data-a="ck" data-k="d">Account doesn’t exist</button>')
++(s?'<button role="menuitem" data-a="ckun">Unmark</button>':'')+'</div>':'')
++(s?'<button class="tag '+stK(p.meta[u])+'" data-a="ckun" title="Tap to unmark" aria-label="'+SLAB[stK(p.meta[u])]+', tap to unmark">'+SLAB[stK(p.meta[u])]+' ✕</button>':'')
 +'<div class="kn">'+(dl?'Deleted account':'<a href="'+url(u)+'" target="_blank" rel="noopener noreferrer">'+esc(u)+'</a>')+'</div>'
-+(flagsOf(p,u).length?'<div class="kbd">'+flagsOf(p,u).map(k=>'<span class="bdg" style="color:'+BDG[k][1]+';background:'+BDG[k][2]+'">'+BDG[k][0]+'</span>').join('')+'</div>':'')
++(flagsOf(p,u).length?'<div class="kbd">'+flagsOf(p,u).map(k=>bdgH(k)).join('')+'</div>':'')
 +(dl?'<p class="mu" style="margin:0 0 14px">This account no longer exists.</p>':'')
 +kd('Relationship',rel2)+(pt?kd('Requested',rel(pt)+' · '+D(pt)):'')+(fg?kd('You followed',rel(fg)+' · '+D(fg)):'')+(fr?kd('Followed you',rel(fr)+' · '+D(fr)):'')
 +'</div>'
@@ -816,12 +854,17 @@ el.innerHTML='<div class="kw">'+hd
 +'<button class="rb" data-a="ck" data-k="skip" title="Skip" aria-label="Skip">→</button></div>'
 +'<button class="gh" data-a="ckclose">Close</button></div>'}
 function ckAct(k){const c=S.ck;if(!c)return;
+c.menu=false;
 if(k==='back'){if(c.i>0){c.i--;ckRender()}return}
 const p=cp(),u=c.q[c.i];if(u===undefined||c.busy)return;c.busy=1;
-const kc=$('#kc');if(kc&&kc.classList)kc.classList.add({k:'fk',r:'fr',skip:'fs'}[k]);
+const kc=$('#kc');if(kc&&kc.classList)kc.classList.add({k:'fk',K:'fk',r:'fr',skip:'fs',d:'fs'}[k]);
 setTimeout(()=>{c.busy=0;if(k!=='skip'){setStatus(p,[u],k)}c.i++;ckRender();render()},200)}
+function ckUnmark(){const c=S.ck;if(!c)return;const p=cp(),u=c.q[c.i];c.menu=false;if(u===undefined){ckRender();return}
+const was=stK(p.meta[u]||{});if(!was){ckRender();return}
+setStatus(p,[u],'');ckRender();render();
+say((u.startsWith('__deleted__')?'Account':'@'+u)+' is unchecked again',()=>{setStatus(p,[u],was);ckRender();render()})}
 function setStatus(p,us,v){const now=Math.round(Date.now()/1000);
-us.forEach(u=>{const m=p.meta[u]=p.meta[u]||{};delete m.k;delete m.x;m.s=v||'';m.t=now});sv(p.name);
+us.forEach(u=>{const m=p.meta[u]=p.meta[u]||{};delete m.k;delete m.x;delete m.sk;m.s=v==='K'?'k':v||'';if(v==='K')m.sk=1;m.t=now});sv(p.name);
 if(p.demo&&!setStatus.warned){setStatus.warned=1;say('This is the example profile, so changes to it aren’t saved')}}
 
 /* ---------- events ---------- */
@@ -849,8 +892,8 @@ else if(a==='bklater'){try{localStorage.setItem('ig_bklater',String(Date.now()))
 else if(a==='dsnap'){const sel=$('#sd');if(sel)S.snapSel=+sel.value;
 if(S.cfm!=='snap'){S.cfm='snap'}else{S.cfm='';delSnap(p,S.snapSel);S.snapSel=-1}}
 else if(a==='dhist'){if(S.cfm!=='hist'){S.cfm='hist'}else{S.cfm='';p.log=[];S.snap=-1;EC.k='';sv(p.name,true);say('History cleared')}}
-else if(a==='dmarks'){if(S.cfm!=='marks'){S.cfm='marks'}else{S.cfm='';const old=Object.keys(p.meta).filter(u=>st(p.meta[u])).map(u=>[u,st(p.meta[u])]);
-setStatus(p,old.map(x=>x[0]),'');say('All marks cleared',()=>{['k','r'].forEach(v=>setStatus(p,old.filter(x=>x[1]===v).map(x=>x[0]),v));render()})}}
+else if(a==='dmarks'){if(S.cfm!=='marks'){S.cfm='marks'}else{S.cfm='';const old=Object.keys(p.meta).filter(u=>st(p.meta[u])&&!sk(p.meta[u])).map(u=>[u,st(p.meta[u])]),nS=Object.keys(p.meta).filter(u=>sk(p.meta[u])).length;
+setStatus(p,old.map(x=>x[0]),'');say('All marks cleared'+(nS?' · '+nS+' super kept left alone':''),()=>{['k','r','d'].forEach(v=>setStatus(p,old.filter(x=>x[1]===v).map(x=>x[0]),v));render()})}}
 else if(a==='dprof'){if(S.cfm!=='prof'){S.cfm='prof'}else{S.cfm='';return delProfile(p.name).then(render)}}
 else if(a==='undo'){const f=undoFn;undoFn=null;clearTimeout(mt);$('#msg').hidden=true;if(f)f()}
 else if(a==='go')return doImport();
@@ -861,14 +904,20 @@ else if(a==='unf'){const k=b.dataset.k;S.f[k]=S.f[k].filter(x=>x!==b.dataset.v);
 else if(a==='kclr'){S.cks=Object.assign(FRESH(),{scope:S.cks.scope,sort:'shuffle',st:['u'],fo:S.cks.fo});return ckRebuild()}
 else if(a==='latest'){S.snap=-1;S.sel.clear()}
 else if(a==='hall'){const vis=p.log.slice(S.snap+1),all=vis.every(g=>S.hid[ck(g)]);vis.forEach(g=>S.hid[ck(g)]=!all)}
-else if(a==='mk'||a==='mr'){const u=b.dataset.u,cur=st(p.meta[u]||{}),v=a==='mk'?'k':'r';setStatus(p,[u],cur===v?'':v)}
-else if(a==='bk'||a==='br'||a==='bu'){const vis=new Set(view()),us=[...S.sel].filter(u=>vis.has(u)),was=us.map(u=>[u,st(p.meta[u]||{})]);
-if(!us.length){S.sel.clear();render();return}
+else if(a==='mk'||a==='mr'){const u=b.dataset.u,cur=st(p.meta[u]||{}),v=a==='mk'?'k':'r';
+/* A super keep is protected from quick taps in the list: change it from the account's details. */
+if(sk(p.meta[u])&&!b.closest('#modal')){say('@'+u+' is super kept. Open the account to change it.')}
+else setStatus(p,[u],cur===v&&!sk(p.meta[u])?'':v)}
+else if(a==='msk'||a==='mdd'){const u=b.dataset.u,m=p.meta[u]||{},v=a==='msk'?'K':'d',on=a==='msk'?sk(m):st(m)==='d';setStatus(p,[u],on?'':v)}
+else if(a==='bk'||a==='br'||a==='bu'){const vis=new Set(view()),sel=[...S.sel].filter(u=>vis.has(u)),us=sel.filter(u=>!sk(p.meta[u])),nS=sel.length-us.length,was=us.map(u=>[u,stK(p.meta[u]||{})]);
+if(!us.length){S.sel.clear();if(nS)say(nS===1?'That account is super kept, so it was left alone':'Those accounts are super kept, so they were left alone');render();return}
 setStatus(p,us,a==='bk'?'k':a==='br'?'r':'');S.sel.clear();
-say(us.length+' account'+(us.length>1?'s':'')+' '+(a==='bk'?'kept':a==='br'?'removed':'cleared'),()=>{was.forEach(x=>setStatus(p,[x[0]],x[1]));render()})}
+say(us.length+' account'+(us.length>1?'s':'')+' '+(a==='bk'?'kept':a==='br'?'removed':'cleared')+(nS?' · '+nS+' super kept left alone':''),()=>{was.forEach(x=>setStatus(p,[x[0]],x[1]));render()})}
 else if(a==='bn')S.sel.clear();
 else if(a==='check')return ckOpen();
 else if(a==='ck')return ckAct(b.dataset.k);
+else if(a==='ckm'){if(S.ck){S.ck.menu=!S.ck.menu;ckRender()}return}
+else if(a==='ckun')return ckUnmark();
 else if(a==='ckf'){S.cks.fo=!S.cks.fo;return ckRender()}
 else if(a==='ckagain')return ckRebuild();
 else if(a==='ckclose'){S.ck=null;ckRender();return render()}
@@ -912,5 +961,5 @@ $('#q').addEventListener('input',()=>{S.n=200;render()});
 $('#modal').addEventListener('click',e=>{if(e.target.id==='modal'){S.rst=null;S.up=false;S.set=false;S.info=null;S.cfm='';render()}});
 
 render();
-(async()=>{await storageInfo();try{if(window.claude){const r=await Promise.all([claude.use('user'),claude.use('db')]);if(r[0]&&r[1])coll=r[1].collection('data/users/'+await r[0].id())}}catch(e){}load()})();
+(async()=>{await storageInfo();try{if(window.claude&&!DEV){const r=await Promise.all([claude.use('user'),claude.use('db')]);if(r[0]&&r[1])coll=r[1].collection('data/users/'+await r[0].id())}}catch(e){}load()})();
 </script></body></html>
