@@ -1,7 +1,7 @@
 {
-  "name": "instagram-unfollowers-tests",
+  "name": "unfollower-checker-tests",
   "private": true,
-  "description": "Browser tests for index.html",
+  "description": "Browser tests for Unfollower Checker",
   "scripts": {
     "test": "node run.js"
   },
