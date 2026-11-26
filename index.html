@@ -141,7 +141,10 @@ input[type=checkbox]:checked::after{content:"";position:absolute;left:5px;top:1.
 #ck{position:fixed;inset:0;background:#000e;z-index:40;display:flex;padding:calc(env(safe-area-inset-top,0px) + 18px) 16px 24px;overflow:auto;animation:fade .18s ease;backdrop-filter:blur(3px)}
 .kw{width:100%;max-width:440px;margin:auto;text-align:center}
 .kh{display:flex;gap:8px;justify-content:center;align-items:center;margin-bottom:12px}.kh select{padding:7px 10px;font-size:13px}
-.kfp{background:var(--sf);border:1px solid var(--bd);border-radius:14px;padding:14px;margin-bottom:12px;text-align:left;animation:sl .2s ease}
+.kh{position:relative}
+/* Checker filters drop down over the card instead of pushing it off screen. */
+.kfp{position:absolute;top:calc(100% + 6px);left:0;right:0;z-index:30;max-height:min(62vh,460px);overflow:auto;background:var(--sf);border:1px solid var(--bd);border-radius:14px;padding:12px;text-align:left;animation:sl .2s ease;box-shadow:0 12px 32px #000a}
+.kfp .fg{gap:6px 14px}.kfp .fs{min-width:120px;flex:1 1 120px}.kfp .cb2{padding:2px 0}.kfp .ft{position:sticky;bottom:-12px;background:var(--sf);padding:8px 0 0;display:flex;gap:8px;justify-content:flex-end}
 .kc{background:var(--sf);border:1px solid var(--bd);border-radius:22px;padding:24px 22px;transition:transform .22s ease,opacity .22s ease,box-shadow .22s ease;animation:pop .22s ease}
 .kc.fk{transform:translateX(118%) rotate(11deg);opacity:0;box-shadow:0 0 0 3px var(--gn)}
 .kc.fr{transform:translateX(-118%) rotate(-11deg);opacity:0;box-shadow:0 0 0 3px var(--rd)}
@@ -161,7 +164,7 @@ button.tag{border:0;cursor:pointer;font-family:inherit}button.tag:hover{filter:b
 .prg{height:3px;background:#262626;border-radius:3px;margin-top:9px;overflow:hidden}.prg i{display:block;height:100%;background:var(--bl);transition:width .25s ease}
 .kb{display:flex;justify-content:center;gap:13px;margin:14px 0 12px}
 .rb{width:60px;height:60px;border-radius:50%;padding:0;font-size:24px;background:var(--sf);border:2px solid #3d3d3d;color:#b0b0b0;display:grid;place-items:center}
-.rb.g{border-color:var(--gn);color:var(--gn)}.rb.x{border-color:var(--rd);color:var(--rd)}
+.rb.g{border-color:var(--gn);color:var(--gn)}.rb.x{border-color:var(--rd);color:var(--rd)}.rb.g.on{background:var(--gn);color:#000}.rb.x.on{background:var(--rd);color:#fff}.rb:disabled{opacity:.35;cursor:not-allowed}
 .rb:hover{background:var(--sf2);transform:translateY(-2px)}.rb:active{transform:scale(.94)}
 #list.fade>*{animation:sl .22s ease}
 @keyframes sl{from{opacity:0;transform:translateY(-7px)}}
@@ -195,6 +198,8 @@ const st=m=>m.s||(m.k?'k':m.x?'r':'');
 /* Super keep is a Keep with sk:1, so older copies of the page still read it as Kept.
    Deactivated is its own status, s:'d'. Neither needs a migration: existing marks are untouched. */
 const sk=m=>!!(m&&m.sk&&st(m)==='k');
+/* Deleted and deactivated accounts can't also be Kept or Removed: the statuses are mutually exclusive. */
+const isDel=u=>u.startsWith('__deleted__'),locked=(u,m)=>isDel(u)||st(m||{})==='d';
 const stK=m=>sk(m)?'K':st(m||{});
 const SLAB={k:'Kept',K:'Kept ★ (super keep)',r:'Removed',d:'Deactivated','':'Unchecked'};
 const MN=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -224,9 +229,9 @@ const emptyFl=()=>({cf:{},fav:{},pend:{},req:{},unf:{},bl:{}});
 const hasFl=p=>FKEYS.some(k=>Object.keys((p.fl||{})[k]||{}).length);
 const FSEC=[
 {k:'dat',t:'Date',o:[['w30','Last 30 days'],['m3','1 to 3 months'],['m6','3 to 6 months'],['m12','6 to 12 months'],['y3','1 to 3 years'],['o3y','Over 3 years']]},
-{k:'usr',t:'Username',o:[['digits','Has numbers'],['sym','Has a dot or underscore'],['long','Over 15 characters'],['del','Deleted accounts']]},
-{k:'st',t:'Status',o:[['u','Unchecked'],['k','Kept'],['K','Super kept'],['r','Removed'],['d','Deactivated']]},
-{k:'flg',t:'Lists',o:FKEYS.map(k=>[k,BDG[k][0]])},
+{k:'usr',t:'Username',o:[['digits','Has numbers'],['sym','Has a dot or underscore'],['long','Over 15 characters']]},
+{k:'st',t:'Status',o:[['u','Unchecked'],['k','Kept'],['K','Super kept'],['r','Removed'],['d','Deactivated'],['del','Deleted']]},
+{k:'flg',t:'Lists',o:FKEYS.filter(k=>k!=='pend'&&k!=='req').map(k=>[k,BDG[k][0]])},
 {k:'chk',t:'Checked',o:[['c7','Last 7 days'],['c30','1 to 4 weeks'],['c90','1 to 3 months'],['c180','3 to 6 months'],['o180','Over 6 months']]}];
 const RANGE={dat:{w30:[0,30],m3:[30,90],m6:[90,180],m12:[180,365],y3:[365,1095],o3y:[1095,1e9]},
 chk:{c7:[0,7],c30:[7,30],c90:[30,90],c180:[90,180],o180:[180,1e9]}};
@@ -240,7 +245,9 @@ const ckScopes=p=>CKS.filter(x=>x[0]!=='pend'||hasPend(p));
 const S={P:{},cur:'example_user',snap:-1,tab:'nofb',sort:'az',f:null,fo:false,sel:new Set(),n:200,up:false,ck:null,hid:{},
 cks:null,
 ins:{prog:'stack',who:'donut',yr:'cols',yrd:'fb',upl:'cols'},csort:'new',set:false,info:null,snapSel:-1};
-S.f=FRESH();S.cks=Object.assign(FRESH(),{scope:'nofb',sort:'shuffle',st:['u'],fo:false});
+S.f=FRESH();S.cks=Object.assign(FRESH(),{scope:'nofb',sort:'shuffle',fo:false});
+/* One set of filters: the tabs and the checker share them, so a filter set in one carries to the other. */
+const fsync=src=>{const dst=src===S.f?S.cks:S.f;FSEC.forEach(x=>dst[x.k]=(src[x.k]||[]).slice())};
 
 /* ---------- example profile ---------- */
 const EX=(()=>{const a=['cristiano','leomessi','selenagomez','kyliejenner','therock','arianagrande','kimkardashian','beyonce','nike','natgeo'],
@@ -279,11 +286,11 @@ const snapDate=p=>S.snap===-1?p.date:(p.log[S.snap]||{}).pd||'';
 
 const tests=(u,t,now,fl,m)=>({chk:(function(){const mm=m||{};if(!st(mm))return{};return bucket('chk',mm.t?(now-mm.t)/86400:1e8)})(),
 dat:t?bucket('dat',(now-t)/86400):{},
-usr:{digits:/\d/.test(u),sym:/[._]/.test(u),long:u.length>15,del:u.startsWith('__deleted__')},
+usr:{digits:/\d/.test(u),sym:/[._]/.test(u),long:u.length>15},
 flg:FKEYS.reduce((a,k)=>{a[k]=!!((fl||{})[k]||{})[u];return a},{})});
 const flagsOf=(p,u)=>FKEYS.filter(k=>((p.fl||{})[k]||{})[u]);
 const okF=(arr,map)=>!arr.length||arr.some(v=>map[v]);
-function match(u,ts,f,m,now,fl){if(f.st.length&&!f.st.includes(stK(m||{})||'u'))return false;
+function match(u,ts,f,m,now,fl){if(f.st.length&&!f.st.includes(isDel(u)?'del':stK(m||{})||'u'))return false;
 const T=tests(u,ts,now,fl,m);if(!ts&&f.dat.length)return false;
 return okF(f.dat,T.dat)&&okF(f.usr,T.usr)&&okF(f.flg||[],T.flg)&&okF(f.chk||[],T.chk)}
 
@@ -642,15 +649,15 @@ let mKind=null,lastTab=null;
 const q0=()=>(($('#q')||{}).value||'').trim();
 
 function row(u,p,C,i,ed){const s=st(p.meta[u]||{}),dl=u.startsWith('__deleted__'),se=S.sel.has(u);
-const sup=sk(p.meta[u]);
+const sup=sk(p.meta[u]),lk=locked(u,p.meta[u])?' disabled':'';
 return '<div class="r'+(s==='k'?' sk':s==='r'?' sr2':s==='d'?' sd':'')+(se?' on':'')+'">'
 +(ed?'<input type="checkbox" data-sel="'+esc(u)+'" data-i="'+i+'" data-fid="s'+esc(u)+'" aria-label="Select '+esc(u)+'" '+(se?'checked':'')+'>':'')
 +'<div class="uc">'+(dl?'<span class="mu" data-u="'+esc(u)+'">Deleted account</span>':'<a href="'+url(u)+'" target="_blank" rel="noopener noreferrer">'+esc(u)+'</a>')
 +(sup?'<span class="star" title="Super kept" aria-label="Super kept">★</span>':'')+(s==='d'?'<span class="bdg" style="color:#bdbdbd;background:#262626">Deactivated</span>':'')
 +flagsOf(p,u).filter(k=>!(k==='pend'&&S.tab==='pend')&&!(k==='bl'&&S.tab==='bl')).map(k=>bdgH(k)).join('')+'</div>'
 +'<div class="dts">'+C.map(c=>{const t=c[1](u);return '<span class="dc" data-l="'+c[0]+'">'+(t?'<b>'+rel(t)+'</b><em>'+D(t)+'</em>':'<b class="mu">Unknown</b>')+'</span>'}).join('')+'</div>'
-+(ed?'<div class="acts"><button class="ab k'+(s==='k'?' on2':'')+'" data-a="mk" data-u="'+esc(u)+'" title="Keep" aria-label="Keep '+esc(u)+'" aria-pressed="'+(s==='k')+'">✓</button>'
-+'<button class="ab x'+(s==='r'?' on2':'')+'" data-a="mr" data-u="'+esc(u)+'" title="Remove" aria-label="Remove '+esc(u)+'" aria-pressed="'+(s==='r')+'">✕</button></div>':'')
++(ed?'<div class="acts"><button class="ab k'+(s==='k'?' on2':'')+'" data-a="mk" data-u="'+esc(u)+'"'+lk+' title="Keep" aria-label="Keep '+esc(u)+'" aria-pressed="'+(s==='k')+'">✓</button>'
++'<button class="ab x'+(s==='r'?' on2':'')+'" data-a="mr" data-u="'+esc(u)+'"'+lk+' title="Remove" aria-label="Remove '+esc(u)+'" aria-pressed="'+(s==='r')+'">✕</button></div>':'')
 +'</div>'}
 
 /* ---------- upload modal ---------- */
@@ -810,9 +817,9 @@ return '<div class="mb"><h3 style="word-break:break-all;margin-bottom:10px">'+(d
 +row('Your mark',SLAB[stK(m)]+(s&&m.t?' · set '+rel(m.t):''))
 +(ev.length?'<div class="sset" style="padding-bottom:0"><b>History</b>'+ev.map(x=>'<div class="kd"><span>'+esc(D2(x[0]))+'</span><b style="font-weight:500">'+esc(x[1])+'</b></div>').join('')+'</div>':'')
 +'<div class="mact" style="flex-wrap:wrap">'
-+'<button class="gh" data-a="mk" data-u="'+esc(u)+'">'+(s==='k'?'✓ Kept':'Keep')+'</button>'
++(locked(u,m)?'':'<button class="gh" data-a="mk" data-u="'+esc(u)+'">'+(s==='k'?'✓ Kept':'Keep')+'</button>'
 +'<button class="gh" data-a="mr" data-u="'+esc(u)+'">'+(s==='r'?'✕ Removed':'Remove')+'</button>'
-+'<button class="gh" data-a="msk" data-u="'+esc(u)+'">'+(sk(m)?'★ Super kept':'★ Super keep')+'</button>'
++'<button class="gh" data-a="msk" data-u="'+esc(u)+'">'+(sk(m)?'★ Super kept':'★ Super keep')+'</button>')
 +(dl?'':'<button class="gh" data-a="mdd" data-u="'+esc(u)+'">'+(s==='d'?'Deactivated ✓':'Doesn’t exist')+'</button>')
 +(dl?'':'<a class="gh" style="padding:8px 14px;border-radius:10px" href="'+url(u)+'" target="_blank" rel="noopener noreferrer">Open on Instagram ↗</a>')
 +'<button class="pr" data-a="close">Done</button></div></div>'}
@@ -821,21 +828,23 @@ return '<div class="mb"><h3 style="word-break:break-all;margin-bottom:10px">'+(d
 function qb(p){const k=S.cks,e=ef(),l=L(e,p),now=Date.now()/1e3,tf=u=>k.scope==='pend'?pendT(p,u):(e.fing[u]||e.fers[u]),
 sh=a=>{for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));const t=a[i];a[i]=a[j];a[j]=t}return a},
 cmp={az:(x,y)=>x<y?-1:1,za:(x,y)=>x<y?1:-1,old:(x,y)=>tf(x)-tf(y),nw:(x,y)=>tf(y)-tf(x),len:(x,y)=>x.length-y.length||(x<y?-1:1)},
-G={nofb:l.nofb,fb:l.fb,fans:l.fans,pend:l.pend},keepDel=(k.usr||[]).indexOf('del')>=0;
+G={nofb:l.nofb,fb:l.fb,fans:l.fans,pend:l.pend},keepDel=(k.st||[]).indexOf('del')>=0;
 return (k.scope==='all'?['nofb','fb','fans']:[k.scope]).flatMap(g=>{
 const a=(G[g]||[]).filter(u=>(keepDel||!u.startsWith('__deleted__'))&&match(u,tf(u),k,p.meta[u]||{},now,p.fl));
 return k.sort==='shuffle'?sh(a):a.sort(cmp[k.sort]||cmp.az)})}
 function ckRebuild(){S.ck={q:qb(cp()),i:0};ckRender()}
-function ckOpen(){ckRebuild()}
+/* The checker opens with the tabs' filters. With none set it starts on Unchecked (only in the checker, until you change a filter there). */
+const ckDef=()=>{fsync(S.f);if(!nF(S.cks))S.cks.st=['u']};
+function ckOpen(){ckDef();ckRebuild()}
 function ckRender(){const c=S.ck,el=$('#ck');if(!c){el.hidden=true;el.innerHTML='';return}
-const p=cp(),e=ef(),u=c.q[c.i],k=S.cks,act=nF(k)>1||k.st[0]!=='u'||k.sort!=='shuffle',
+const p=cp(),e=ef(),u=c.q[c.i],k=S.cks,act=!(nF(k)===1&&k.st.length===1&&k.st[0]==='u')&&nF(k)>0||k.sort!=='shuffle',
 hd='<div class="kh"><select data-ck2="scope" aria-label="Group">'+ckScopes(p).map(x=>'<option value="'+x[0]+'" '+(k.scope===x[0]?'selected':'')+'>'+x[1]+'</option>').join('')+'</select>'
-+'<button data-a="ckf" class="ic'+(k.fo?' pr':'')+'" title="Filters and sort" aria-label="Filters and sort" aria-expanded="'+k.fo+'">'+FIC+(act?'<i class="dt"></i>':'')+'</button></div>'
++'<button data-a="ckf" class="ic'+(k.fo?' pr':'')+'" title="Filters and sort" aria-label="Filters and sort" aria-expanded="'+k.fo+'">'+FIC+(act?'<i class="dt"></i>':'')+'</button>'
 +(k.fo?'<div class="kfp"><div class="fg">'+FSEC.filter(x=>x.k!=='flg'||hasFl(p)).map(s=>'<div class="fs"><b>'+s.t+'</b>'
 +s.o.map(o=>'<label class="cb2"><input type="checkbox" data-ck="'+s.k+'" value="'+o[0]+'" '+(k[s.k].includes(o[0])?'checked':'')+'>'+o[1]+'</label>').join('')+'</div>').join('')
 +'<div class="fs"><b>Order</b><label class="cb2" style="padding-top:0"><select data-ck2="sort" style="width:100%">'
 +[['shuffle','Shuffle']].concat(SORTS).map(x=>'<option value="'+x[0]+'" '+(k.sort===x[0]?'selected':'')+'>'+x[1]+'</option>').join('')+'</select></label></div>'
-+'</div>'+MNOTE+'<div class="ft"><button class="gh" data-a="kclr">Reset</button></div></div>':'');
++'</div>'+MNOTE+'<div class="ft"><button class="gh" data-a="kclr">Reset</button><button class="pr" data-a="ckf">Done</button></div></div>':'')+'</div>';
 el.hidden=false;
 if(u===undefined){const left=c.q.filter(x=>!st(p.meta[x]||{})).length,more=qb(p).length;
 el.innerHTML='<div class="kw">'+hd+'<div class="kc"><h3 style="margin:0 0 8px">'+(c.q.length?'All done':'Nothing to check')+'</h3>'
@@ -843,12 +852,13 @@ el.innerHTML='<div class="kw">'+hd+'<div class="kc"><h3 style="margin:0 0 8px">'
 +(more?'<button class="pr" data-a="ckagain">'+(left?'Go through skipped':'Start again')+'</button> ':'')+'<button class="gh" data-a="ckclose">Close</button>'
 +(c.i>0?'<p style="margin:14px 0 0"><button class="gh" data-a="ck" data-k="back">← Back</button></p>':'')+'</div></div>';return}
 const s=st(p.meta[u]||{}),dl=u.startsWith('__deleted__'),fg=e.fing[u],fr=e.fers[u],pt=pendT(p,u),ed0=live(),
+lk=locked(u,p.meta[u]),lkT=dl?'Deleted accounts can’t be kept or removed':'Unmark Deactivated first to keep or remove',
 rel2=k.scope==='pend'?'Follow request not accepted':fg&&fr?'Follows you back':fg?'Doesn’t follow you back':'Follows you, you don’t follow back',
 kd=(a,b)=>'<div class="kd"><span>'+a+'</span><b>'+b+'</b></div>';
 el.innerHTML='<div class="kw">'+hd
 +'<div class="kc" id="kc">'+(ed0?'<button class="kmore" data-a="ckm" title="More" aria-label="More options" aria-expanded="'+!!c.menu+'">⋯</button>':'')
 +(c.menu?'<div class="kmenu" role="menu">'
-+(sk(p.meta[u])?'':'<button role="menuitem" data-a="ck" data-k="K">★ Super keep</button>')
++(sk(p.meta[u])||lk?'':'<button role="menuitem" data-a="ck" data-k="K">★ Super keep</button>')
 +(s==='d'||dl?'':'<button role="menuitem" data-a="ck" data-k="d">Account doesn’t exist</button>')
 +(s?'<button role="menuitem" data-a="ckun">Unmark</button>':'')+'</div>':'')
 +(s?'<button class="tag '+stK(p.meta[u])+'" data-a="ckun" title="Tap to unmark" aria-label="'+SLAB[stK(p.meta[u])]+', tap to unmark">'+(sk(p.meta[u])?'Kept<span class="star">★</span>':SLAB[s])+' ✕</button>':'')
@@ -859,14 +869,16 @@ el.innerHTML='<div class="kw">'+hd
 +'</div>'
 +'<div class="kp">'+(c.i+1)+' of '+c.q.length+'<div class="prg"><i style="width:'+((c.i)/c.q.length*100)+'%"></i></div></div>'
 +'<div class="kb"><button class="rb" data-a="ck" data-k="back" title="Previous" aria-label="Previous account" '+(c.i?'':'disabled')+'>←</button>'
-+'<button class="rb x" data-a="ck" data-k="r" title="Remove" aria-label="Remove">✕</button>'
-+'<button class="rb g" data-a="ck" data-k="k" title="Keep" aria-label="Keep">✓</button>'
++'<button class="rb x'+(s==='r'?' on':'')+'" data-a="ck" data-k="r" title="'+(lk?lkT:'Remove')+'" aria-label="Remove" aria-pressed="'+(s==='r')+'"'+(lk?' disabled':'')+'>✕</button>'
++'<button class="rb g'+(s==='k'?' on':'')+'" data-a="ck" data-k="k" title="'+(lk?lkT:'Keep')+'" aria-label="Keep" aria-pressed="'+(s==='k')+'"'+(lk?' disabled':'')+'>✓</button>'
 +'<button class="rb" data-a="ck" data-k="skip" title="Skip" aria-label="Skip">→</button></div>'
 +'<button class="gh" data-a="ckclose">Close</button></div>'}
 function ckAct(k){const c=S.ck;if(!c)return;
 c.menu=false;
 if(k==='back'){if(c.i>0){c.i--;ckRender()}return}
-const p=cp(),u=c.q[c.i];if(u===undefined||c.busy)return;c.busy=1;
+const p=cp(),u=c.q[c.i];if(u===undefined||c.busy)return;
+if((k==='k'||k==='r'||k==='K')&&locked(u,p.meta[u]))return;
+c.busy=1;
 const kc=$('#kc');if(kc&&kc.classList)kc.classList.add({k:'fk',K:'fk',r:'fr',skip:'fs',d:'fs'}[k]);
 /* Keep on a super kept account leaves the star on: it's already kept. */
 setTimeout(()=>{c.busy=0;if(k!=='skip'&&!(k==='k'&&sk(p.meta[u]))){setStatus(p,[u],k)}c.i++;ckRender();render()},200)}
@@ -911,20 +923,21 @@ else if(a==='undo'){const f=undoFn;undoFn=null;clearTimeout(mt);$('#msg').hidden
 else if(a==='go')return doImport();
 else if(a==='more')S.n+=200;
 else if(a==='lf')S.fo=!S.fo;
-else if(a==='fclr'){S.f=FRESH();S.n=200}
-else if(a==='unf'){const k=b.dataset.k;S.f[k]=S.f[k].filter(x=>x!==b.dataset.v);S.n=200}
-else if(a==='kclr'){S.cks=Object.assign(FRESH(),{scope:S.cks.scope,sort:'shuffle',st:['u'],fo:S.cks.fo});return ckRebuild()}
+else if(a==='fclr'){S.f=FRESH();fsync(S.f);S.n=200}
+else if(a==='unf'){const k=b.dataset.k;S.f[k]=S.f[k].filter(x=>x!==b.dataset.v);fsync(S.f);S.n=200}
+else if(a==='kclr'){S.cks=Object.assign(FRESH(),{scope:S.cks.scope,sort:'shuffle',fo:S.cks.fo});fsync(S.cks);ckDef();return ckRebuild()}
 else if(a==='latest'){S.snap=-1;S.sel.clear()}
 else if(a==='hall'){const vis=p.log.slice(S.snap+1),all=vis.every(g=>S.hid[ck(g)]);vis.forEach(g=>S.hid[ck(g)]=!all)}
 else if(a==='mk'||a==='mr'){const u=b.dataset.u,cur=st(p.meta[u]||{}),v=a==='mk'?'k':'r';
 /* A super keep is protected from quick taps in the list: change it from the account's details. */
-if(sk(p.meta[u])&&!b.closest('#modal')){say('@'+u+' is super kept. Open the account to change it.')}
+if(locked(u,p.meta[u])){say(isDel(u)?'Deleted accounts can’t be kept or removed':'@'+u+' is marked Deactivated. Unmark it first to keep or remove it.')}
+else if(sk(p.meta[u])&&!b.closest('#modal')){say('@'+u+' is super kept. Open the account to change it.')}
 else if(!(v==='k'&&sk(p.meta[u])))setStatus(p,[u],cur===v?'':v)}
-else if(a==='msk'||a==='mdd'){const u=b.dataset.u,m=p.meta[u]||{},v=a==='msk'?'K':'d',on=a==='msk'?sk(m):st(m)==='d';setStatus(p,[u],on?'':v)}
-else if(a==='bk'||a==='br'||a==='bu'){const vis=new Set(view()),sel=[...S.sel].filter(u=>vis.has(u)),us=sel.filter(u=>!sk(p.meta[u])),nS=sel.length-us.length,was=us.map(u=>[u,stK(p.meta[u]||{})]);
-if(!us.length){S.sel.clear();if(nS)say(nS===1?'That account is super kept, so it was left alone':'Those accounts are super kept, so they were left alone');render();return}
+else if(a==='msk'||a==='mdd'){const u=b.dataset.u,m=p.meta[u]||{},v=a==='msk'?'K':'d',on=a==='msk'?sk(m):st(m)==='d';if(!(a==='msk'&&locked(u,m))&&!(a==='mdd'&&isDel(u)))setStatus(p,[u],on?'':v)}
+else if(a==='bk'||a==='br'||a==='bu'){const vis=new Set(view()),sel=[...S.sel].filter(u=>vis.has(u)),us=sel.filter(u=>!sk(p.meta[u])&&!(a!=='bu'&&locked(u,p.meta[u]))),nL=a==='bu'?0:sel.filter(u=>!sk(p.meta[u])&&locked(u,p.meta[u])).length,nS=sel.length-us.length-nL,was=us.map(u=>[u,stK(p.meta[u]||{})]);
+if(!us.length){S.sel.clear();if(nS||nL)say(nL&&!nS?(nL===1?'That account is deleted or deactivated, so it can’t be kept or removed':'Those accounts are deleted or deactivated, so they can’t be kept or removed'):nS&&!nL?(nS===1?'That account is super kept, so it was left alone':'Those accounts are super kept, so they were left alone'):'Those accounts are super kept, deleted or deactivated, so they were left alone');render();return}
 setStatus(p,us,a==='bk'?'k':a==='br'?'r':'');S.sel.clear();
-say(us.length+' account'+(us.length>1?'s':'')+' '+(a==='bk'?'kept':a==='br'?'removed':'cleared')+(nS?' · '+nS+' super kept left alone':''),()=>{was.forEach(x=>setStatus(p,[x[0]],x[1]));render()})}
+say(us.length+' account'+(us.length>1?'s':'')+' '+(a==='bk'?'kept':a==='br'?'removed':'cleared')+(nS?' · '+nS+' super kept left alone':'')+(nL?' · '+nL+' deleted or deactivated skipped':''),()=>{was.forEach(x=>setStatus(p,[x[0]],x[1]));render()})}
 else if(a==='bn')S.sel.clear();
 else if(a==='check')return ckOpen();
 else if(a==='ck')return ckAct(b.dataset.k);
@@ -936,8 +949,8 @@ else if(a==='ckclose'){S.ck=null;ckRender();return render()}
 render()});
 
 document.addEventListener('change',e=>{const t=e.target,p=cp(),d=t.dataset||{};
-if(d.f!==undefined){const k=d.f,v=t.value;S.f[k]=t.checked?S.f[k].concat([v]):S.f[k].filter(x=>x!==v);S.n=200}
-else if(d.ck!==undefined){const k=d.ck,v=t.value;S.cks[k]=t.checked?S.cks[k].concat([v]):S.cks[k].filter(x=>x!==v);return ckRebuild()}
+if(d.f!==undefined){const k=d.f,v=t.value;S.f[k]=t.checked?S.f[k].concat([v]):S.f[k].filter(x=>x!==v);fsync(S.f);S.n=200}
+else if(d.ck!==undefined){const k=d.ck,v=t.value;S.cks[k]=t.checked?S.cks[k].concat([v]):S.cks[k].filter(x=>x!==v);fsync(S.cks);return ckRebuild()}
 else if(d.ck2!==undefined){S.cks[d.ck2]=t.value;if(d.ck2==='scope'){S.tab=t.value;S.sel.clear()}return ckRebuild()}
 else if(d.ins!==undefined)S.ins[d.ins]=t.value;
 else if(d.insd!==undefined)S.ins[d.insd+'d']=t.value;

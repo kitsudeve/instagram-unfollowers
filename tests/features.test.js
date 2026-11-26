@@ -9,9 +9,9 @@ const FERS = { bob: T + 15, dave: T + 25 };
 const meta = (page, u) => page.evaluate(u => Object.assign({}, S.P.me.meta[u]), u);
 // Open the checker on one account (alphabetical order, everything in the group).
 async function openChecker(page, st) {
-  await page.evaluate(st => { S.cks.sort = 'az'; S.cks.st = st; }, st || []);
   await page.click('[data-a=check]').catch(() => page.evaluate(() => ckOpen()));
   await page.evaluate(() => ckOpen());
+  await page.evaluate(st => { S.cks.sort = 'az'; S.cks.st = st; ckRebuild(); }, st || []);
   await page.waitForSelector('#kc');
 }
 const cardName = page => page.textContent('#kc .kn');
@@ -236,6 +236,95 @@ module.exports = {
     await page.click('#modal [data-a=msk]');
     const m = await meta(page, 'alice');
     assert.ok(!m.sk && !m.s, 'the star button is how you take it off');
+    await context.close();
+  },
+  async 'going back in the checker lights up the button it was marked with'(browser) {
+    const { context, page } = await openDevice(browser);
+    await importExport(page, { profile: 'me', fing: FING, fers: FERS });
+    await openChecker(page, []);
+    assert.strictEqual(await page.$('#kc ~ .kb .rb.on'), null, 'nothing lit on an unchecked account');
+    await page.click('#ck [data-a=ck][data-k=k]'); await after(page);
+    await page.click('#ck [data-a=ck][data-k=r]'); await after(page);
+    await page.evaluate(() => ckAct('back'));
+    assert.strictEqual(await cardName(page), 'carol');
+    assert.ok(await page.$('#ck .rb.x.on'), 'Remove is lit'); assert.strictEqual(await page.$('#ck .rb.g.on'), null);
+    await page.evaluate(() => ckAct('back'));
+    assert.ok(await page.$('#ck .rb.g.on'), 'Keep is lit'); assert.strictEqual(await page.$('#ck .rb.x.on'), null);
+    await context.close();
+  },
+  async 'deleted and deactivated accounts cannot be kept or removed'(browser) {
+    const { context, page } = await openDevice(browser);
+    const D = '__deleted__x1';
+    await importExport(page, { profile: 'me', fing: Object.assign({ [D]: T + 5 }, FING), fers: FERS });
+    await openChecker(page, ['del', 'u']);
+    assert.strictEqual(await cardName(page), 'Deleted account');
+    assert.strictEqual(await page.$eval('#ck [data-k=k]', b => b.disabled), true);
+    assert.strictEqual(await page.$eval('#ck [data-k=r]', b => b.disabled), true);
+    await page.evaluate(() => ckAct('k')); await after(page);
+    assert.strictEqual(await cardName(page), 'Deleted account', 'no move, no mark');
+    assert.deepStrictEqual(await meta(page, D), {});
+    await page.evaluate(() => ckAct('skip')); await after(page);
+    // alice: mark deactivated, then Keep/Remove are blocked until unmarked.
+    await page.click('[data-a=ckm]'); await page.click('.kmenu [data-k=d]'); await after(page);
+    await page.evaluate(() => ckAct('back'));
+    assert.strictEqual(await page.$eval('#ck [data-k=k]', b => b.disabled), true);
+    await page.click('[data-a=ckm]');
+    assert.strictEqual(await page.$('.kmenu [data-k=K]'), null, 'no super keep either');
+    await page.click('[data-a=ckclose]');
+    assert.strictEqual(await page.$eval('[data-a=mk][data-u="alice"]', b => b.disabled), true);
+    await page.evaluate(() => { const b = document.querySelector('[data-a=mr][data-u="alice"]'); b.disabled = false; b.click(); });
+    assert.strictEqual((await meta(page, 'alice')).s, 'd', 'still deactivated');
+    // Bulk keep skips both.
+    await page.evaluate(D => { S.sel = new Set([D, 'alice', 'carol']); document.querySelector('body').dispatchEvent(new Event('x')); }, D);
+    await page.evaluate(() => { const b = document.createElement('button'); b.dataset.a = 'bk'; document.body.appendChild(b); b.click(); b.remove(); });
+    assert.strictEqual((await meta(page, 'alice')).s, 'd');
+    assert.deepStrictEqual(await meta(page, D), {});
+    assert.strictEqual((await meta(page, 'carol')).s, 'k');
+    await context.close();
+  },
+  async 'Deleted is a status filter and request lists are not filters'(browser) {
+    const { context, page } = await openDevice(browser);
+    const D = '__deleted__x1';
+    await importExport(page, { profile: 'me', fing: Object.assign({ [D]: T + 5 }, FING), fers: FERS });
+    const r = await page.evaluate(() => ({
+      usr: FSEC.find(x => x.k === 'usr').o.map(x => x[0]),
+      st: FSEC.find(x => x.k === 'st').o.map(x => x[0]),
+      flg: FSEC.find(x => x.k === 'flg').o.map(x => x[0]) }));
+    assert.ok(!r.usr.includes('del')); assert.ok(r.st.includes('del'));
+    assert.ok(!r.flg.includes('pend') && !r.flg.includes('req'));
+    assert.deepStrictEqual(await page.evaluate(() => { S.f.st = ['del']; return view(); }), ['__deleted__x1']);
+    assert.ok(!(await page.evaluate(() => { S.f.st = ['u']; return view(); })).includes(D), 'deleted is not also Unchecked');
+    await context.close();
+  },
+  async 'filters carry over between the tabs and the checker'(browser) {
+    const { context, page } = await openDevice(browser);
+    await importExport(page, { profile: 'me', fing: FING, fers: FERS });
+    await page.click('#msg [data-a=msgx]');
+    await page.click('[data-a=lf]');
+    await page.check('[data-f=st][value=u]');
+    await page.click('[data-a=check]').catch(() => page.evaluate(() => ckOpen()));
+    await page.waitForSelector('#kc');
+    assert.deepStrictEqual(await page.evaluate(() => S.cks.st), ['u'], 'tab filter shows in the checker');
+    await page.click('[data-a=ckf]');
+    await page.check('[data-ck=usr][value=digits]');
+    await page.click('.kfp [data-a=ckf]');
+    assert.strictEqual(await page.$('.kfp'), null, 'Done closes the filters');
+    await page.click('[data-a=ckclose]');
+    assert.deepStrictEqual(await page.evaluate(() => [S.f.st, S.f.usr]), [['u'], ['digits']], 'checker filter shows in the tabs');
+    await context.close();
+  },
+  async 'the checker starts on Unchecked when the tabs have no filters'(browser) {
+    const { context, page } = await openDevice(browser);
+    await importExport(page, { profile: 'me', fing: FING, fers: FERS });
+    await mark(page, 'alice', 'k');
+    await page.evaluate(() => ckOpen());
+    assert.deepStrictEqual(await page.evaluate(() => S.cks.st), ['u']);
+    assert.ok(!(await page.evaluate(() => S.ck.q)).includes('alice'), 'kept account not in the queue');
+    await page.evaluate(() => { S.ck = null; render(); });
+    assert.deepStrictEqual(await page.evaluate(() => S.f.st), [], 'tabs stay unfiltered');
+    // With a tab filter set, the checker uses that instead.
+    await page.evaluate(() => { S.f.usr = ['digits']; ckOpen(); });
+    assert.deepStrictEqual(await page.evaluate(() => [S.cks.st, S.cks.usr]), [[], ['digits']]);
     await context.close();
   },
 };
